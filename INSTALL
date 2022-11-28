@@ -1,0 +1,244 @@
+
+     _________________________________________________________________
+   
+                        Installing UUDeview for Unix
+                                      
+                       The Nice and Friendly Decoder
+   
+   The first step, of course, is to get a copy of the source code to your
+   hard disk. If you have not already done so, go back to the UUDeview
+   home page at http://www.fpx.de/fp/Software/UUDeview/ and download a
+   copy.
+   
+   UUDeview for Unix is available in two flavors, and there are separate
+   installation instructions for both.
+   
+     * Installation instructions for the .tar.gz version
+     * Installation instructions for the Self-Installing version.
+     _________________________________________________________________
+   
+Installation Instructions for the .tar.gz Version
+     _________________________________________________________________
+   
+   There are four steps in order to install UUDeview for Unix.
+    1. Extraction of the source files.
+    2. Configuration.
+    3. Compilation.
+    4. Installation.
+       
+   If you're too lazy to type in all these commands yourself, you might
+   want to download the Self-Installing Archive (go back to the previous
+   page in order to download it). With that version, all you have to do
+   is download ... and execute it!
+   
+  Extraction
+  
+   As Unix user, you should be familiar with the utilities gunzip and tar
+   (if not, ask a friend). This step is pretty simple and
+   straightforward. First, uncompress the source code, then unpack the
+   archive using the two commands
+        gunzip uudeview-n.tar.gz
+        tar xvf uudeview-n.tar
+
+   Insert UUDeview's current version number for n. If you get any errors
+   here, the archive you've downloaded was probably corrupt.
+   
+   Otherwise, you should see a new subdirectory with plenty of files
+   within it. Change to this subdirectory now, using
+        cd uudeview-n
+
+Configuration
+
+   UUDeview comes with an autoconf configuration script, which will
+   usually set all the necessary options for your system automatically.
+   You can invoke this script by entering
+        ./configure
+
+   However, there are some options this script can't guess, which you
+   might have to set manually by passing parameters to the configuration
+   script. You can receive a complete list of options with the --help
+   parameter. Don't be overwhelmed by them, usually you won't need one of
+   them. Here's a description of the more important options:
+   
+   --prefix=DIR
+          Sets the base path where the binaries and manual pages will be
+          installed to. Biaries will go to DIR/bin, and manuals to
+          DIR/man. The default location is /usr/local. If you just want
+          to keep the files in your own directories, use --prefix=$HOME.
+          You can also set the binary and manual paths separately using
+          --bindir and --mandir.
+          
+   --enable-tcl=DIR
+          Use this option if you have Tcl installed in a non-standard
+          location. We will need the Tcl include file <tcl.h> in
+          DIR/include and the Tcl library libtcl*.a in DIR/lib.
+          
+   --enable-tk=DIR
+          Same for your Tk installation.
+          
+   --disable-tcl
+          Use if you don't want support for the Tcl/Tk extensions. The
+          frontend will not be built or installed.
+          
+   --disable-manuals
+          If you don't want to the manual pages to be installed.
+          
+   --enable-sendmail=PROG
+          Use PROG to mail messages to the internet. The program is given
+          a list of white-space separated recipients on the command line
+          and is fed the mail message, including headers, via standard
+          input. One use of this option is to define a program doing
+          certain preprocessing on the message before handing it over to
+          the mail system.
+          If this option is not used, the configuration script does try
+          to locate certain common mail agents by itself, with sendmail
+          being the first choice.
+          You can also use --disable-sendmail to disable the mail sending
+          facility altogether.
+          
+   --enable-inews=PROG
+          Use PROG to post articles to the usenet. The program is given
+          the parameter "-h" on the command line and is fed the article,
+          including headers, via standard input. (The -h option usually
+          instructs inews to honor the message's headers.) One use of
+          this option is to define a program doing certain preprocessing
+          on the article before handing it over to the news system.
+          If this option is not used, the configuration script tries to
+          locate the inews program, or configures itself to compile and
+          use the replacement mini-inews.
+          You can also use --disable-inews to disable the message posting
+          facility altogether.
+          
+   --disable-minews
+          If there's no news system installed on your site, a replacement
+          inews, which is capable of posting files to a newsgroup, will
+          be installed. Use this option if you don't want this program to
+          be installed, or if it fails to compile (it's not quite as
+          portable as the rest of the code).
+          
+   --enable-posting=server
+          If using our replacement inews, we must have the address of a
+          server we can route our postings to. With this option, you can
+          specify the hostname or IP address of such a news serving host.
+          You can always override this setting at runtime by setting the
+          NNTPSERVER environment variable.
+          
+   --enable-domain=domainname
+          If using our replacement inews, we need the name of a domain to
+          identify ourselves. The configuration script knows of some
+          means where to get your site's domain name from. If these tests
+          fail, you should set the name with this parameter (otherwise, a
+          bogus name will be configured). Note that the name of your
+          domain does not include the hostname.
+          
+   The configuration script is also sensitive to a couple of environment
+   variables. The most important ones are
+   
+   CC
+          The C compiler to use.
+          
+   CPPFLAGS
+          Flags to pass to the C preprocessor.
+          
+   CFLAGS
+          Flags to pass to the C compiler.
+          
+   LDFLAGS
+          Flags to pass to the compiler when linking.
+          
+   LIBS
+          Additional libraries.
+          
+   You should have a look at the messages the run of ./configure
+   generates. If you believe there's something wrong with them, you'll
+   probably need one of the above options to correct it.
+   
+Compilation
+
+   This step should be a piece of cake. Just issue the following command:
+        make
+
+   This should compile everything. In the unlikely event of compiler
+   errors, you will probably have to add some options on the call to
+   ./configure above.
+   
+Installation
+
+   Installation should be just as simple as compilation. If you chose to
+   install the programs in a system-wide directory (rather than your home
+   directory), make sure you run the following command as root.
+        make install
+
+   This copies the binaries and manual pages to their final locations.
+   
+   You should now test the installation by invoking uudeview and
+   uuenview. Both should print a short description of their command-line
+   options.
+   
+   If it works, congratulations, you have successfully installed the
+   UUDeview package. You can now go on and test whether mailing and
+   posting from uuenview works, preferredly by emailing a file to
+   yourself and posting to local test newsgroups.
+   
+   Optionally, you may also try to use the compatibility features of both
+   uudeview and uuenview by symlinking uuencode to uuenview and uudecode
+   to uudeview. Called like that, both tools will try to mimic their
+   predecessors' behaviour (but of couse being much smarter).
+     _________________________________________________________________
+   
+Installation Instructions for the SFX Version
+     _________________________________________________________________
+   
+   You can start the installation process by running
+        sh uudeview-sfx-n.sh
+
+   Insert UUDeview's current version number for n.
+   
+   The auto-installer will then prompt you for several installation
+   options. Sensible defaults are provided, so that you can try to just
+   hit return upon each prompt. These prompts are:
+   
+   Installation Prefix
+          The base directory for installing UUDeview's files. Programs
+          will be installed into the bin subdirectory, manual pages into
+          the man subdirectory.
+          
+          If you are running the script from a normal user account, the
+          default will be to install UUDeview into your home directory.
+          The programs will therefore be in $HOME/bin.
+          
+          If you are running the script as superuser (root), the default
+          installation prefix will be /usr/local
+          
+   Do you want manual pages
+          You can choose to install manual pages (this is the default),
+          or not to install them by entering "n".
+          
+   Add Tcl support if possible
+   Add Tk support if possible
+          If Tcl/Tk is available, UUDeview will add support for the
+          graphical frontend, xdeview. The default is to check whether
+          Tcl/Tk is available in an appropriate version. You can disable
+          this check (therefore disabling the frontent) by answering "n".
+          On both prompts, you can also give directories where to look
+          for the Tcl/Tk files.
+          
+   Your domain
+          If you intend to post directly from UUEnview to usenet
+          newsgroups, you should enter your domain name here, else users
+          will not be able to reply to your postings.
+          
+   After answering these questions, the auto-installer will prompt you
+   before building and installing UUDeview, so that you can interrupt the
+   process at any time.
+   
+   Afterwards, you will have installed the UUDeview package successfully.
+   You can now go on and test whether mailing and posting from uuenview
+   works, preferredly by emailing a file to yourself and posting to local
+   test newsgroups.
+     _________________________________________________________________
+   
+   
+    Frank Pilhofer <fp@fpx.de> Back to the Homepage
+    
+   Last modified: Wed Jun 6 20:33:04 2001

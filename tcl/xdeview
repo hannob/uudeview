@@ -1,0 +1,3349 @@
+#! /bin/sh
+# The next line restarts using wish \
+exec uuwish "$0" ${1+"$@"}
+
+#
+# Init Options
+#
+
+proc ifndef { var val } {
+    global $var
+    if { [ catch { set $var } ] } {
+	set $var $val
+    }
+}
+
+#
+# read in rc file
+#
+
+if { ! [ catch { set env(HOME) } ] } {
+    catch { source $env(HOME)/.xdeviewrc }
+}
+
+#
+# overridable options for decoding
+#
+
+ifndef OptionFast 0
+ifndef OptionBracket 0
+ifndef OptionOverwrite 0
+ifndef OptionDesperate 0
+ifndef OptionVerbose 0
+ifndef OptionDumbness 0
+ifndef OptionUsetext 0
+ifndef SaveFilePath [ pwd ]
+ifndef OptionDebug 0
+ifndef OptionAutoInfo 0
+ifndef OptionRemove 0
+ifndef OptionMoreMime 0
+
+#
+# overridable encoding options
+#
+
+ifndef EncodeMaxLines	0
+ifndef EncodeEncoding	0
+ifndef EncodeSubject	""
+ifndef EncodeFrom       ""
+ifndef EncodeReplyTo    ""
+ifndef EncodeFileYes	1
+ifndef EncodeFilePath	$SaveFilePath
+ifndef EncodeMailYes	0
+ifndef EncodeMailAddr	""
+ifndef EncodeNewsYes	0
+ifndef EncodeNewsGroup	""
+ifndef NNTPServer	""
+
+#
+# MIME configuration
+#
+
+ifndef MIMEGlobalTypes	""
+ifndef MIMEGlobalCap	""
+if { ! [ catch { set env(HOME) } ] } {
+    ifndef MIMELocalTypes	$env(HOME)/.mime.types
+    ifndef MIMELocalCap		$env(HOME)/.mailcap
+} else {
+    ifndef MIMELocalTypes	""
+    ifndef MIMELocalCap		""
+}
+
+#
+# check whether we are started from within uudeview and have tk support
+#
+
+if { [ catch { uu_Info have_tk } have_tk ] } {
+    puts "Xdeview error: this file must be loaded from within uudeview"
+    exit 1
+}
+if { ! [ lindex [ lindex $have_tk 0 ] 1 ] } {
+    puts "Xdeview error: tk support not compiled"
+    exit 1
+}
+
+##############################################################################
+# General Helper functions
+##############################################################################
+
+#
+# Get a file type from .mime.types
+#
+
+proc GetTypeByExtension { ext } {
+    global MIMELocalTypes MIMEGlobalTypes
+
+    foreach fname "$MIMELocalTypes $MIMEGlobalTypes" {
+	if { [ catch { open $fname r } fileID ] } {
+	    return
+	}
+	while { ! [ eof $fileID ] } {
+	    if { [ gets $fileID TheLine ] < 0 } {
+		break
+	    }
+	    if { [ string index $TheLine 0 ] == "#" } {
+		continue
+	    } elseif { [ llength $TheLine ] < 2 } {
+		continue
+	    }
+	    for { set index 1 } { $index < [ llength $TheLine ] } { incr index } {
+		if { [ string tolower [ lindex $TheLine $index ] ] == \
+			[ string tolower $ext ] } {
+		    close $fileID
+		    return [ lindex $TheLine 0 ]
+		}
+	    }
+	}
+	close $fileID
+    }
+    return
+}
+
+#
+# see what to do with this type by reading .mailcap
+#
+
+proc GetTypeAction { type } {
+    global MIMELocalCap MIMEGlobalCap
+    foreach fname "$MIMELocalCap $MIMEGlobalCap" {
+	if { [ catch { open $fname r } fileID ] } {
+	    continue
+	}
+	while { ! [ eof $fileID ] } {
+	    if { [ gets $fileID TheLine ] < 0 } {
+		break
+	    }
+	    if { [ string index $TheLine 0 ] == "#" } {
+		continue
+	    }
+
+	    if { [ set ThisType [ lindex [ split $TheLine ";" ] 0 ] ] == "" } {
+		continue
+	    }
+
+	    if { [ string match \
+		    [ string tolower $ThisType ] [ string tolower $type ] ] } {
+		close $fileID
+		return [ lindex [ split $TheLine ";" ] 1 ]
+	    }
+	}
+	close $fileID
+    }
+    return
+}
+
+##############################################################################
+# Specific helper functions
+##############################################################################
+
+#
+# Retrieve the current global FileList and display it. Store in $FileList
+#
+
+proc ShowFileList {} {
+    global FileList
+
+    proc GetStatus { Code } {
+	if { [ expr $Code & 0x08 ] } {
+	    return "No Data"
+	} elseif { [ expr $Code & 0x20 ] } {
+	    return "Error"
+	} elseif { [ expr $Code & 0x10 ] } {
+	    return "OK"
+	} elseif { [ expr $Code & 0x01 ] } {
+	    return "Incomplete"
+	} elseif { [ expr $Code & 0x02 ] } {
+	    return "No Begin"
+	} elseif { [ expr $Code & 0x04 ] } {
+	    return "No End"
+	} elseif { $Code == 0 } {
+	    return "Oops"
+	}
+	return "Error"
+    }
+
+    ._MainFrame._FileList._Status delete 0 end
+    ._MainFrame._FileList._Liste delete 0 end
+
+    set FileList [uu_GetListOfFiles]
+
+    foreach item $FileList {
+	._MainFrame._FileList._Status insert end [GetStatus [lindex $item 1]]
+	._MainFrame._FileList._Liste insert end [ lindex $item 2 ]
+    }
+}
+
+#
+# Check the Path
+#
+
+proc CheckWritable { Path } {
+    if { ! [ expr [ file isdirectory $Path ] && [ file writable $Path ] ] } {
+	tk_dialog ._Dialog { Illegal Save Path } "You do not have the\
+		proper permissions to write to the selected Save Path.\
+		Please use a different Directory" \
+		warning 0 OK
+	return 0
+    }
+    return 1
+}
+
+#
+# Callback function for warnings and errors
+#
+
+proc OpenMessageWindow { } {
+    if { [ catch { .messages configure } ] } {
+	toplevel .messages
+	frame .messages.top
+	frame .messages.bot
+	text .messages.top.text -relief raised -bd 2 -wrap none \
+		-xscrollcommand ".messages.top.sbx set" \
+		-yscrollcommand ".messages.top.sby set" 
+	scrollbar .messages.top.sbx -command ".messages.top.text xview" \
+		-orient horizontal
+	scrollbar .messages.top.sby -command ".messages.top.text yview"
+	
+	pack .messages.top.sbx -side bottom -fill x
+	pack .messages.top.sby -side right -fill y
+	pack .messages.top.text -fill both -expand 1
+	
+	button .messages.bot.done -text "Done" -command "destroy .messages"
+	pack .messages.bot.done -side right -padx 4 -pady 4
+	
+	pack .messages.top -side top -fill both -expand 1
+	pack .messages.bot -side bottom
+	
+	wm title .messages "Runtime Messages"
+    }
+}
+
+#
+# Display a message in our Runtime Messages window, if verbose
+#
+
+proc DisplayMessage { level string } {
+    global OptionVerbose
+
+    if { $OptionVerbose } {
+	OpenMessageWindow
+	.messages.top.text insert end $string
+	.messages.top.text insert end "\n"
+	.messages.top.text yview end
+	update
+    }
+    if { $level == 2 } {
+	tk_dialog ._Dialog "Warning" $string warning 0 OK
+    } elseif { $level > 2 } {
+	tk_dialog ._Dialog "Error" $string error 0 OK
+    }    
+}
+
+#
+# Dump the current File List in the Runtime Messages window
+#
+
+proc DumpFileList { } {
+    global FileList
+
+    OpenMessageWindow
+
+    if { [ llength $FileList ] == 0 } {
+	return
+    }
+
+    .messages.top.text insert end "\n"
+
+    foreach file $FileList {
+	if { [ expr [ lindex $file 1 ] & 0x08 ] } {
+	    continue
+	}
+	.messages.top.text insert end \
+		"Found '[lindex $file 2]'\
+		State [lindex $file 1] [lindex $file 4]\
+		Parts [lindex $file 5]\n"
+    }
+    .messages.top.text insert end "\n"
+    .messages.top.text yview end
+}
+
+#
+# Handle Busy Callback
+#
+
+proc WeAreBusy {} {
+    set BusyInfo [uu_GetProgressInfo]
+
+    if { [ lindex $BusyInfo 0 ] == 1 } {
+	._Status._Text config -text \
+		"Loading [ file tail [ lindex $BusyInfo 1 ] ] --\
+		[ lindex $BusyInfo 4 ]% done"
+    } elseif { [ lindex $BusyInfo 0 ] == 2 } {
+	set percent [expr 100*[lindex $BusyInfo 2]+[lindex $BusyInfo 4]-100]
+	set percent [expr $percent / [lindex $BusyInfo 3]]
+
+	._Status._Text configure -text \
+		"Decoding [file tail [lindex $BusyInfo 1 ] ] --\
+		$percent% done"
+    } elseif { [ lindex $BusyInfo 0 ] == 3 } {
+	._Status._Text config -text \
+		"Copying [ file tail [ lindex $BusyInfo 1 ] ] --\
+		[ lindex $BusyInfo 4 ]% done"
+    } elseif { [ lindex $BusyInfo 0 ] == 4 } {
+	set percent [expr 100*[lindex $BusyInfo 2]+[lindex $BusyInfo 4]-100]
+	set percent [expr $percent / [lindex $BusyInfo 3]]
+
+	._Status._Text configure -text \
+		"Encoding [file tail [lindex $BusyInfo 1 ] ] --\
+		$percent% done"
+    }
+    update
+}
+
+#
+# Helper function to load a bunch of files
+#
+
+proc LoadFiles { LoadFileList } {
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+
+    . config -cursor watch
+
+    foreach file $LoadFileList {
+	#
+	# recurse into subdirectories
+	#
+	if { [ file isdirectory $file ] && [ file readable $file ] } {
+	    LoadFiles [ glob -nocomplain [ file join $file * ] ]
+	    continue
+	} elseif { ! [ file readable $file ] || [ file isdirectory $file ] } {
+	    tk_dialog ._Dialog "File Unreadable" "File $file is read\
+		    protected or is a directory" warning 0 OK
+	    continue
+	}
+	._Status._Text config -text "Loading [ file tail $file ] ..."
+	update
+	uu_LoadFile $file
+    }
+
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+}
+
+##############################################################################
+# Button bindings && Menu functions
+##############################################################################
+
+#
+# Menu Command File->Quit
+#
+
+proc Quit {} { 
+    uu_CleanUp
+    destroy .
+    exit 0
+}
+
+#
+# Menu Command File->Load
+#
+
+proc Load {} {
+    global OptionVerbose
+
+    set oldText [ lindex [ ._Status._Text config -text ] 4 ]
+    ._Status._Text config -text "Waiting for you to Select Files"
+    set LoadFileList [ tk_SelectFiles "Select Files for Decoding" 1 1 ]
+    ._Status._Text config -text $oldText
+
+    if { $LoadFileList != {} } {
+	LoadFiles $LoadFileList
+	ShowFileList
+	if { $OptionVerbose } {
+	    DumpFileList
+	}
+    }
+}
+
+#
+# Menu Command File->Helper Setup
+#
+
+proc MimeSetup {} {
+    global MIMEGlobalTypes MIMELocalCap MIMEGlobalCap MIMELocalTypes
+    global tempGlobalTypes tempLocalCap tempGlobalCap tempLocalTypes
+    global MSFinish
+
+    set tempGlobalTypes $MIMEGlobalTypes
+    set tempLocalCap    $MIMELocalCap
+    set tempGlobalCap   $MIMEGlobalCap
+    set tempLocalTypes  $MIMELocalTypes
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+    set oldFocus  [ focus ]
+
+    toplevel .mime
+    wm title .mime "Helper Setup"
+
+    frame .mime.top -relief groove -bd 1
+    frame .mime.top.gt
+    frame .mime.top.lt
+    frame .mime.top.gc
+    frame .mime.top.lc
+
+    label .mime.top.gt.lab -text "Global Types File" -width 16 \
+	    -justify left -anchor w
+    entry .mime.top.gt.ent -relief sunken -width 30 \
+	    -textvariable MIMEGlobalTypes
+    button .mime.top.gt.but -text "Browse" -width 8 -command {
+	set OldDir [ file dirname $MIMEGlobalTypes ]
+	set NewFile [ tk_SelectFiles "Global Types File" 0 0 $OldDir ]
+	if { $NewFile != "" } { set MIMEGlobalTypes $NewFile }
+    }
+    label .mime.top.lt.lab -text "Local Types File" -width 16 \
+	    -justify left -anchor w
+    entry .mime.top.lt.ent -relief sunken -width 30 \
+	    -textvariable MIMELocalTypes
+    button .mime.top.lt.but -text "Browse" -width 8 -command {
+	set OldDir [ file dirname $MIMELocalTypes ]
+	set NewFile [ tk_SelectFiles "Local Types File" 0 0 $OldDir ]
+	if { $NewFile != "" } { set MIMELocalTypes $NewFile }
+    }
+    label .mime.top.gc.lab -text "Global Mailcap File" -width 16 \
+	    -justify left -anchor w
+    entry .mime.top.gc.ent -relief sunken -width 30 \
+	    -textvariable MIMEGlobalCap
+    button .mime.top.gc.but -text "Browse" -width 8 -command {
+	set OldDir [ file dirname $MIMEGlobalCap ]
+	set NewFile [ tk_SelectFiles "Global Mailcap File" 0 0 $OldDir ]
+	if { $NewFile != "" } { set MIMEGlobalCap $NewFile }
+    }
+    label .mime.top.lc.lab -text "Local Mailcap File" -width 16 \
+	    -justify left -anchor w
+    entry .mime.top.lc.ent -relief sunken -width 30 \
+	    -textvariable MIMELocalCap
+    button .mime.top.lc.but -text "Browse" -width 8 -command {
+	set OldDir [ file dirname $MIMELocalCap ]
+	set NewFile [ tk_SelectFiles "Local Mailcap File" 0 0 $OldDir ]
+	if { $NewFile != "" } { set MIMELocalCap $NewFile }
+    }
+
+    pack .mime.top.gt.lab -side left -padx 4 -pady 4
+    pack .mime.top.gt.but -side right -padx 4
+    pack .mime.top.gt.ent -side right -padx 4 -pady 4 -expand true -fill x
+
+    pack .mime.top.lt.lab -side left -padx 4 -pady 4
+    pack .mime.top.lt.but -side right -padx 4
+    pack .mime.top.lt.ent -side right -padx 4 -pady 4 -expand true -fill x
+
+    pack .mime.top.gc.lab -side left -padx 4 -pady 4
+    pack .mime.top.gc.but -side right -padx 4
+    pack .mime.top.gc.ent -side right -padx 4 -pady 4 -expand true -fill x
+
+    pack .mime.top.lc.lab -side left -padx 4 -pady 4
+    pack .mime.top.lc.but -side right -padx 4
+    pack .mime.top.lc.ent -side right -padx 4 -pady 4 -expand true -fill x
+
+    pack .mime.top.gt .mime.top.lt .mime.top.gc .mime.top.lc \
+	    -side top -expand true -fill both
+
+    frame .mime.but -relief raised -bd 2
+    frame .mime.but.b
+
+    button .mime.but.b.ok -text "Ok" -width 8 -command { 
+	if { $MIMEGlobalTypes != "" && \
+		! [ file readable $MIMEGlobalTypes ] } {
+	    tk_dialog ._Dialog "File Does not Exist" "Global Types File\
+		    $MIMEGlobalTypes does not exist or is not readable." \
+		    error 0 OK
+	} elseif { $MIMELocalTypes != "" && \
+		! [ file readable $MIMELocalTypes ] } {
+	    tk_dialog ._Dialog "File Does not Exist" "Local Types File\
+		    $MIMELocalTypes does not exist or is not readable." \
+		    error 0 OK
+	} elseif { $MIMEGlobalCap != "" && \
+		! [ file readable $MIMEGlobalCap ] } {
+	    tk_dialog ._Dialog "File Does not Exist" "Global Mailcap File\
+		    $MIMEGlobalCap does not exist or is not readable." \
+		    error 0 OK
+	} elseif { $MIMELocalCap != "" && \
+		! [ file readable $MIMELocalCap ] } {
+	    tk_dialog ._Dialog "File Does not Exist" "Local Mailcap File\
+		    $MIMELocalCap does not exist or is not readable." \
+		    error 0 OK
+	} else {
+	    set MSFinish ok
+	}
+    }
+    button .mime.but.b.cancel -text "Cancel" -width 8 \
+	    -command { set MSFinish cancel }
+
+    pack .mime.but.b.ok .mime.but.b.cancel -side left -ipadx 4 -ipady 4 \
+	    -padx 4 -pady 4 -expand true
+    pack .mime.but.b -fill both -expand true -fill both
+
+    pack .mime.top -side top -fill x
+    pack .mime.but -side bottom -fill both -expand true
+
+    bind .mime.top.gt.ent <Return> {
+	if { $MIMEGlobalTypes != "" } {
+	    if { ! [ file readable $MIMEGlobalTypes ] } {
+		tk_dialog ._Dialog "File Does not Exist" "Global Types File\
+			$MIMEGlobalTypes does not exist or is not readable." \
+			error 0 OK
+	    }
+	}
+    }
+    bind .mime.top.lt.ent <Return> {
+	if { $MIMELocalTypes != "" } {
+	    if { ! [ file readable $MIMELocalTypes ] } {
+		tk_dialog ._Dialog "File Does not Exist" "Local Types File\
+			$MIMELocalTypes does not exist or is not readable." \
+			error 0 OK
+	    }
+	}
+    }
+    bind .mime.top.gc.ent <Return> {
+	if { $MIMEGlobalCap != "" } {
+	    if { ! [ file readable $MIMEGlobalCap ] } {
+		tk_dialog ._Dialog "File Does not Exist" "Global Mailcap File\
+			$MIMEGlobalCap does not exist or is not readable." \
+			error 0 OK
+	    }
+	}
+    }
+    bind .mime.top.lc.ent <Return> {
+	if { $MIMELocalCap != "" } {
+	    if { ! [ file readable $MIMELocalCap ] } {
+		tk_dialog ._Dialog "File Does not Exist" "Local Mailcap File\
+			$MIMELocalCap does not exist or is not readable." \
+			error 0 OK
+	    }
+	}
+    }
+
+    . config -cursor watch
+    tkwait visibility .mime
+    ._Status._Text config -text "Waiting for Configuration"
+    grab set .mime
+    focus .mime
+    set MSFinish {}
+
+    tkwait variable MSFinish
+
+    if { $MSFinish != "ok" } {
+	set MIMEGlobalTypes $tempGlobalTypes
+	set MIMELocalCap    $tempLocalCap
+	set MIMEGlobalCap   $tempGlobalCap
+	set MIMELocalTypes  $tempLocalTypes
+    }
+    . config -cursor $oldCursor
+    ._Status._Text config -text $oldText
+    focus $oldFocus
+    destroy .mime
+}
+
+#
+# Menu Command File->Save Setup
+#
+
+proc SaveSetup {} {
+    global OptionFast OptionBracket OptionOverwrite
+    global OptionDesperate OptionVerbose OptionAutoInfo
+    global SaveFilePath EncodeMaxLines EncodeEncoding
+    global EncodeFilePath NNTPServer MIMELocalTypes
+    global MIMEGlobalTypes MIMELocalCap MIMEGlobalCap
+    global OptionDumbness OptionUsetext OptionRemove
+    global OptionMoreMime EncodeFrom EncodeReplyTo
+    global env
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+
+    . config -cursor watch
+    ._Status._Text config -text "Saving Setup"
+
+    if { [ catch { set env(HOME) } ] || $env(HOME) == "" } {
+	tk_dialog ._Dialog "OOps" "Could not find your home directory." \
+		error 0 OK
+	. config -cursor $oldCursor
+	._Status._Text config -text $oldText
+	return
+    }
+
+    #
+    # need temp file
+    #
+    if { ! [ catch { set $env(TEMP) } ] } {
+	set tempname "$env(TEMP)/xdeview[pid]"
+    } else {
+	set tempname "/tmp/xdeview.[pid]"
+    }
+
+    if { [ file exists $tempname ] } {
+	foreach ext { 001 002 003 004 005 006 007 008 009 010 042 } {
+	    if { ! [ catch { set $env(TEMP) } ] } {
+		set tempname "$env(TEMP)/xdeview.$ext"
+	    } else {
+		set tempname "/tmp/xdeview.$ext"
+	    }
+	    if { [ file exists $tempname ] } {
+		break
+	    }
+	}
+	if { [ file exits $tempname] } {
+	    tk_dialog ._Dialog "OOps" "Could not save your setup. Couldn't\
+		    find suitable temporary file" error 0 OK
+	    . config -cursor $oldCursor
+	    ._Status._Text config -text $oldText
+	    return
+	}
+    }
+    if { [ catch { open $tempname w } writeID ] } {
+	tk_dialog ._Dialog "OOps" "Cannot write to temp file $tempname.\
+		Setup not saved." error 0 OK
+	. config -cursor $oldCursor
+	._Status._Text config -text $oldText
+	return
+    }
+
+    set rcfile $env(HOME)/.xdeviewrc
+
+    if { ! [ catch { open $rcfile r } readID ] } {
+	#
+	# copy existing resouce file
+	#
+	while { ! [ eof $readID ] } {
+	    if { [ gets $readID TheLine ] < 0 } {
+		break
+	    }
+	    puts $writeID $TheLine
+
+	    if { [ string first "--xdeview--" $TheLine ] != -1 } {
+		break
+	    }
+	}
+	if { [ eof $readID ] } {
+	    puts $writeID "#"
+	    puts $writeID "# --xdeview-- auto-generated do not add code below"
+	}
+	close $readID
+    } else {
+	puts $writeID "#"
+	puts $writeID "# --xdeview-- auto-generated do not add code below"
+    }
+    #
+    # save configuration information
+    #
+    puts $writeID "#"
+    puts $writeID "# options for decoding"
+    puts $writeID "#"
+    puts $writeID "ifndef OptionFast       $OptionFast"
+    puts $writeID "ifndef OptionBracket    $OptionBracket"
+    puts $writeID "ifndef OptionOverwrite  $OptionOverwrite"
+    puts $writeID "ifndef OptionDesperate  $OptionDesperate"
+    puts $writeID "ifndef OptionVerbose    $OptionVerbose"
+    puts $writeID "ifndef OptionDumbness   $OptionDumbness"
+    puts $writeID "ifndef OptionAutoInfo   $OptionAutoInfo"
+    puts $writeID "ifndef OptionUsetext    $OptionUsetext"
+    puts $writeID "ifndef SaveFilePath     \"$SaveFilePath\""
+    puts $writeID "ifndef OptionRemove     $OptionRemove"
+    puts $writeID "ifndef OptionMoreMime   $OptionMoreMime"
+    puts $writeID "#"
+    puts $writeID "# encoding options"
+    puts $writeID "#"
+    puts $writeID "ifndef EncodeMaxLines   $EncodeMaxLines"
+    puts $writeID "ifndef EncodeEncoding   $EncodeEncoding"
+    puts $writeID "ifndef EncodeFilePath   \"$EncodeFilePath\""
+    puts $writeID "ifndef EncodeFrom       \"$EncodeFrom\""
+    puts $writeID "ifndef EncodeReplyTo    \"$EncodeReplyTo\""
+    puts $writeID "ifndef NNTPServer       \"$NNTPServer\""
+    puts $writeID "#"
+    puts $writeID "# MIME capabilities"
+    puts $writeID "#"
+    puts $writeID "ifndef MIMELocalTypes   \"$MIMELocalTypes\""
+    puts $writeID "ifndef MIMEGlobalTypes  \"$MIMEGlobalTypes\""
+    puts $writeID "ifndef MIMELocalCap     \"$MIMELocalCap\""
+    puts $writeID "ifndef MIMEGlobalCap    \"$MIMEGlobalCap\""
+    puts $writeID "#"
+    puts $writeID ""
+
+    close $writeID
+
+    #
+    # copy temp file back to real ./xdeviewrc
+    #
+
+    if { [ catch { open $tempname r } readID ] } {
+	tk_dialog ._Dialog "This is weird" "Could not re-open the temp\
+		file $tempname. Setup not saved." error 0 OK
+	. config -cursor $oldCursor
+	._Status._Text config -text $oldText
+	exec -- rm -f $tempname
+	return
+    }
+    if { [ catch { open $rcfile w } writeID ] } {
+	tk_dialog ._Dialog "OOps" "Cannot write to setup file $rcfile.\
+		Setup not saved." error 0 OK
+	. config -cursor $oldCursor
+	._Status._Text config -text $oldText
+	close $readID
+	exec -- rm -f $tempname
+	return
+    }
+    while { ! [ eof $readID ] } {
+	if { [ gets $readID TheLine ] < 0 } {
+	    break
+	}
+	puts $writeID $TheLine
+    }
+    close $writeID
+    close $readID
+
+    exec -- rm -f $tempname
+    
+    . config -cursor $oldCursor
+    ._Status._Text config -text $oldText
+
+    tk_dialog ._Dialog "OK" "Setup successfully saved to $rcfile." \
+	    "" 0 OK
+}    
+
+#
+# Menu Command File->Encode
+#
+
+proc Encode {} {
+    global EncodeFileName
+    global EncodeMaxLines
+    global EncodeEncoding
+    global EncodeSubject
+    global EncodeFrom
+    global EncodeReplyTo
+
+    global EncodeFileYes
+    global EncodeFilePath
+    global EncodeMailYes
+    global EncodeMailAddr
+    global EncodeNewsYes
+    global EncodeNewsGroup
+    global SaveFilePath
+    global EncodeButton
+    global HaveNNTPServer
+    global NNTPServer
+    global env
+
+    ifndef EncodeMaxLines	0
+    ifndef EncodeEncoding	0
+    ifndef EncodeSubject	""
+    ifndef EncodeFrom           ""
+    ifndef EncodeReplyTo        ""
+    ifndef EncodeFileYes	1
+    ifndef EncodeFilePath	$SaveFilePath
+    ifndef EncodeMailYes	0
+    ifndef EncodeMailAddr	""
+    ifndef EncodeNewsYes	0
+    ifndef EncodeNewsGroup	""
+    ifndef NNTPServer		""
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+    set oldFocus  [ focus ]
+
+    set have_mail [ lindex [ lindex [ uu_Info have_mail ] 0 ] 1 ]
+    set have_news [ lindex [ lindex [ uu_Info have_news ] 0 ] 1 ]
+    set need_nntp [ lindex [ lindex [ uu_Info need_nntpserver ] 0 ] 1 ]
+
+    if { $have_news && $need_nntp && $NNTPServer == "" } {
+	if { [ catch { set NNTPServer $env(NNTPSERVER) } ] } {
+	    set NNTPServer ""
+	}
+    }
+
+    ._Status._Text config -text "Waiting for you to Select Files for Encoding"
+    set EncodeFileList [ tk_SelectFiles "Select Files for Encoding" 1 0 ]
+
+    if { $EncodeFileList == {} } {
+	._Status._Text config -text $oldText
+	return
+    }
+
+    set EncodeFileCount [ llength $EncodeFileList ]
+
+    #
+    # what to do with these files?
+    #
+
+    toplevel ._Encode
+    wm title ._Encode "Encode Files"
+
+    #
+    # first section: How many files left?
+    #
+
+    frame ._Encode._Toplab -relief raised -bd 2
+    label ._Encode._Toplab.lab -text "0 Files left to Encode"
+    pack ._Encode._Toplab.lab -padx 2 -pady 2 -anchor w
+
+    #
+    # second section: file names of source and sent file
+    #
+
+    frame ._Encode._Names -relief raised -bd 2
+    frame ._Encode._Names.top
+    frame ._Encode._Names.bot
+
+    label ._Encode._Names.top.lab -text "Filename:" -width 12 \
+	    -justify left -anchor w
+    entry ._Encode._Names.top.nam -relief sunken -width 30
+    label ._Encode._Names.bot.lab -text "Send as:" -width 12 \
+	    -justify left -anchor w
+    entry ._Encode._Names.bot.nam -relief sunken -width 30 \
+	    -textvariable EncodeFileName
+
+    pack ._Encode._Names.top.lab -side left -padx 2 -pady 2
+    pack ._Encode._Names.top.nam -side right -padx 2 -pady 2 \
+	    -fill x -expand true
+    pack ._Encode._Names.bot.lab -side left -padx 2 -pady 2
+    pack ._Encode._Names.bot.nam -side right -padx 2 -pady 2 \
+	    -fill x -expand true
+
+    pack ._Encode._Names.top ._Encode._Names.bot \
+	    -padx 4 -pady 4 -side top -fill x -expand true
+
+    frame ._Encode._Header -relief raised -bd 2
+    frame ._Encode._Header.from
+    frame ._Encode._Header.replyto
+    frame ._Encode._Header.subject
+
+    label ._Encode._Header.from.msg -text "From:" -width 12 \
+	    -justify left -anchor w
+    entry ._Encode._Header.from.ent -relief sunken -width 30 \
+	    -textvariable EncodeFrom
+
+    label ._Encode._Header.replyto.msg -text "Reply To:" -width 12 \
+	    -justify left -anchor w
+    entry ._Encode._Header.replyto.ent -relief sunken -width 30 \
+	    -textvariable EncodeReplyTo
+
+    label ._Encode._Header.subject.msg -text "Subject:" -width 12 \
+	    -justify left -anchor w
+    entry ._Encode._Header.subject.ent -relief sunken -width 30 \
+	    -textvariable EncodeSubject
+
+    pack ._Encode._Header.from.msg -side left -padx 2 -pady 2
+    pack ._Encode._Header.from.ent -side right -padx 2 -pady 2 \
+	    -expand true -fill x
+
+    pack ._Encode._Header.replyto.msg -side left -padx 2 -pady 2
+    pack ._Encode._Header.replyto.ent -side right -padx 2 -pady 2 \
+	    -expand true -fill x
+
+    pack ._Encode._Header.subject.msg -side left -padx 2 -pady 2
+    pack ._Encode._Header.subject.ent -side right -padx 2 -pady 2 \
+	    -expand true -fill x
+
+
+    pack ._Encode._Header.from ._Encode._Header.replyto \
+	    ._Encode._Header.subject \
+	    -padx 4 -pady 4 -side top -fill x -expand true
+
+    #
+    # third section: encoding options
+    #
+
+    frame ._Encode._Options -relief raised -bd 2
+    frame ._Encode._Options.left
+    frame ._Encode._Options.right
+    frame ._Encode._Options.righter
+    frame ._Encode._Options.left.top
+    frame ._Encode._Options.left.empty
+    frame ._Encode._Options.left.bot
+
+    label ._Encode._Options.left.top.msg -text "Encoding Options:"
+
+    entry ._Encode._Options.left.bot.lines -relief sunken -width 5 \
+	    -textvariable EncodeMaxLines
+    label ._Encode._Options.left.bot.msg -text "Lines per File" \
+	    -justify left
+
+    radiobutton ._Encode._Options.right.uue -text "UU Encoding" \
+	    -variable EncodeEncoding -value 0 -relief flat -anchor w \
+	    -selectcolor black
+    radiobutton ._Encode._Options.right.xxe -text "XX Encoding" \
+	    -variable EncodeEncoding -value 1 -relief flat -anchor w \
+	    -selectcolor black
+    radiobutton ._Encode._Options.right.b64 -text "Base64 Encoding" \
+	    -variable EncodeEncoding -value 2 -relief flat -anchor w \
+	    -selectcolor black
+    radiobutton ._Encode._Options.righter.pt -text "Plain Text" \
+	    -variable EncodeEncoding -value 3 -relief flat -anchor w \
+	    -selectcolor black
+    radiobutton ._Encode._Options.righter.qp -text "Quoted Printable" \
+	    -variable EncodeEncoding -value 4 -relief flat -anchor w \
+	    -selectcolor black
+    radiobutton ._Encode._Options.righter.ye -text "yEnc Encoding" \
+	    -variable EncodeEncoding -value 5 -relief flat -anchor w \
+	    -selectcolor black
+
+    pack ._Encode._Options.left.bot.lines ._Encode._Options.left.bot.msg \
+	    -padx 4 -pady 4 -side left
+    pack ._Encode._Options.left.top.msg -padx 2 -pady 2 -anchor nw
+    pack ._Encode._Options.left.top -fill x -side top
+    pack ._Encode._Options.left.bot -anchor sw -side bottom -padx 4 -pady 4
+    pack ._Encode._Options.left.empty -fill both -expand true
+
+    pack ._Encode._Options.right.uue ._Encode._Options.right.xxe \
+	    ._Encode._Options.right.b64 \
+	    -padx 4 -pady 2 -fill x
+
+    pack ._Encode._Options.righter.pt ._Encode._Options.righter.qp \
+	    -padx 4 -pady 2 -fill x
+
+    pack ._Encode._Options.righter.ye \
+	    -padx 4 -pady 2 -fill x
+
+    pack ._Encode._Options.left ._Encode._Options.right \
+	    ._Encode._Options.righter \
+	    -side left -fill both -expand true
+
+    #
+    # fourth section: what to do with encoded data
+    #
+
+    frame ._Encode._Actions -relief raised -bd 2
+    frame ._Encode._Actions.title
+    frame ._Encode._Actions.file
+    frame ._Encode._Actions.mail
+    frame ._Encode._Actions.news
+
+    label ._Encode._Actions.title.lab -text "Encoding Actions:"
+    pack ._Encode._Actions.title.lab -padx 2 -pady 2 -anchor w
+
+    checkbutton ._Encode._Actions.file.but -variable EncodeFileYes \
+	    -text "File In (Path):" -width 12 -justify left -anchor w \
+	    -selectcolor black
+    entry ._Encode._Actions.file.ent -relief sunken -width 30 \
+	    -textvariable EncodeFilePath
+    button ._Encode._Actions.file.bb -text "Browse" -command {
+	set NewPath [ tk_SelectFiles "Encoding Path" 0 2 ]
+	if { $NewPath != "" } {
+	    if { [ CheckWritable $NewPath ] } {
+		set EncodeFilePath [ CompressSlashes $NewPath ]
+	    }
+	}
+    }
+
+    checkbutton ._Encode._Actions.mail.but -variable EncodeMailYes \
+	    -text "Email To ..." -width 12 -justify left -anchor w \
+	    -selectcolor black
+    entry ._Encode._Actions.mail.ent -relief sunken -width 30 \
+	    -textvariable EncodeMailAddr
+
+    checkbutton ._Encode._Actions.news.but -variable EncodeNewsYes \
+	    -text "Post To ..." -width 12 -justify left -anchor w \
+	    -selectcolor black
+    entry ._Encode._Actions.news.ent -relief sunken -width 30 \
+	    -textvariable EncodeNewsGroup
+
+    #
+    # if we need an NNTP server, add a button
+    #
+
+    if { $have_news && $need_nntp } {
+	frame ._Encode._Actions.nntp
+	checkbutton ._Encode._Actions.nntp.but -variable HaveNNTPServer \
+		-text "NNTP Server" -width 12 -justify left -anchor w \
+		-selectcolor black
+	entry ._Encode._Actions.nntp.ent -relief sunken -width 30 \
+		-textvariable NNTPServer
+	._Encode._Actions.nntp.but select
+    }
+
+    pack ._Encode._Actions.file.but -side left -padx 4 -pady 4
+    pack ._Encode._Actions.file.bb  -side right -padx 4
+    pack ._Encode._Actions.file.ent -side right -padx 4 -pady 4 \
+	    -expand true -fill x
+
+    pack ._Encode._Actions.mail.but -side left -padx 4 -pady 4
+    pack ._Encode._Actions.mail.ent -side right -padx 4 -pady 4 \
+	    -expand true -fill x
+
+    pack ._Encode._Actions.news.but -side left -padx 4 -pady 4
+    pack ._Encode._Actions.news.ent -side right -padx 4 -pady 4 \
+	    -expand true -fill x
+
+    pack ._Encode._Actions.title -side top -fill x -expand true
+    pack ._Encode._Actions.file  -side top -fill x -expand true
+    pack ._Encode._Actions.mail  -side top -fill x -expand true
+    pack ._Encode._Actions.news  -side top -fill x -expand true
+
+    if { $have_news && $need_nntp } {
+	pack ._Encode._Actions.nntp.but -side left -padx 4 -pady 4
+	pack ._Encode._Actions.nntp.ent -side right -padx 4 -pady 4 \
+		-expand true -fill x
+	pack ._Encode._Actions.nntp -side top -fill x -expand true
+    }
+
+    #
+    # fifth section: the buttons
+    #
+
+    frame ._Encode._Buttons -relief raised -bd 2
+    frame ._Encode._Buttons.b
+
+    button ._Encode._Buttons.b._Ok -text "Ok" -width 8 \
+	    -command { set EncodeButton ok }
+    button ._Encode._Buttons.b._OkAll -text "Ok to All" -width 8 \
+	    -command { set EncodeButton okall }
+    button ._Encode._Buttons.b._Next -text "Next" -width 8 \
+	    -command { set EncodeButton next }
+    button ._Encode._Buttons.b._Cancel -text "Cancel" -width 8 \
+	    -command { set EncodeButton cancel }
+
+    pack ._Encode._Buttons.b._Ok ._Encode._Buttons.b._OkAll \
+	    ._Encode._Buttons.b._Next ._Encode._Buttons.b._Cancel \
+	    -side left -ipadx 4 -ipady 4 -padx 4 -pady 4 -expand true
+    pack ._Encode._Buttons.b -fill both -expand true
+
+
+    pack ._Encode._Toplab ._Encode._Names ._Encode._Header \
+	    ._Encode._Options ._Encode._Actions \
+	    -fill x -side top
+    pack ._Encode._Buttons -fill both -side bottom -expand true
+
+    #
+    # wow, dialog box is finally drawn. now make it do something
+    #
+
+    if { $have_mail == 0 } {
+	._Encode._Actions.mail.but deselect
+	._Encode._Actions.mail.ent delete 0 end
+	._Encode._Actions.mail.ent insert 0 "(Email not Available)"
+	._Encode._Actions.mail.but configure -state disabled
+	._Encode._Actions.mail.ent configure -state disabled
+    }
+    if { $have_news == 0 } {
+	._Encode._Actions.news.but deselect
+	._Encode._Actions.news.ent delete 0 end
+	._Encode._Actions.news.ent insert 0 "(Posting not Available)"
+	._Encode._Actions.news.but configure -state disabled
+	._Encode._Actions.news.ent configure -state disabled
+    }
+
+    bind ._Encode._Actions.file.ent <Return> {
+	if { $EncodeFilePath == {} } {
+	    set EncodeFilePath [ pwd ]
+	}
+	set EncodeFilePath [ CompressSlashes $EncodeFilePath ]
+	CheckWritable $EncodeFilePath
+    }
+    bind ._Encode._Options.left.bot.lines <Return> {
+	if { $EncodeMaxLines < 200 && $EncodeMaxLines != 0 } {
+	    tk_dialog ._Dialog { Illegal Number of Lines } "You have\
+		    entered an invalid value for the number of lines\
+		    per encoded file. It must either be 0 (no limit)\
+		    or greater than 200." error 0 OK
+	    set EncodeMaxLines 0
+	}
+    }
+
+    #
+    # iterate through files
+    #
+
+    . config -cursor watch
+    tkwait visibility ._Encode
+    grab set ._Encode
+    focus ._Encode
+
+    set index 0
+    set EncodeButton {}
+
+    while { $index < $EncodeFileCount } {
+	set EFPath [ lindex $EncodeFileList $index ]
+	set EFName [ file tail $EFPath ]
+
+	._Encode config -cursor {}
+
+	if { ! [ file readable $EFPath ] || [ file isdirectory $EFPath ] } {
+	    tk_dialog ._Dialog { Cannot read File } "Cannot read $EFPath" \
+		    error 0 OK
+	    incr index
+	    continue
+	}
+
+	._Encode._Names.top.nam configure -state normal
+	._Encode._Names.top.nam delete 0 end
+	._Encode._Names.top.nam insert 0 $EFPath
+	._Encode._Names.top.nam configure -state disabled
+
+	._Encode._Names.bot.nam delete 0 end
+	._Encode._Names.bot.nam insert 0 $EFName
+
+	._Encode._Toplab.lab config -text \
+		"[ expr $EncodeFileCount - $index ] Files left to Encode"
+
+	._Status._Text config -text "Waiting for action on $EFName"
+
+	if { $EncodeButton != "okall" } {
+	    while { 42 } {
+		set EncodeButton {}
+		tkwait variable EncodeButton
+		if { $EncodeButton == "cancel" } {
+		    break
+		}
+		#
+		# check parameter
+		#
+		if { $EncodeFilePath == {} } {
+		    set EncodeFilePath [ pwd ]
+		}
+		set EncodeFilePath [ CompressSlashes $EncodeFilePath ]
+		if { $EncodeFileYes && ! [ CheckWritable $EncodeFilePath ] } {
+		    continue
+		}
+		if { $EncodeMaxLines < 200 && $EncodeMaxLines != 0 } {
+		    tk_dialog ._Dialog { Illegal Number of Lines } "You have\
+			    entered an invalid value for the number of lines\
+			    per encoded file. It must either be 0 (no limit)\
+			    or greater than 200." error 0 OK
+		    set EncodeMaxLines 0
+		    continue
+		}
+		if { $have_news && $need_nntp && $EncodeNewsYes } {
+		    if { $HaveNNTPServer == 0 || $NNTPServer == {} } {
+			tk_dialog ._Dialog { No NNTP Server } "You must\
+				provide the address of an NNTP server in\
+				order to post a file. You can also set\
+				your environment variable\
+				\$NNTPSERVER or define the address at\
+				compile time." error 0 OK
+			continue
+		    }
+		}
+		break
+	    }
+	}
+	#
+	# check which button was pressed
+	#
+	if { $EncodeButton == "cancel" } {
+	    break
+	} elseif { $EncodeButton == "next" } {
+	    incr index
+	    continue
+	}
+	#
+	# at this point, we want to process the file (either ok or okall)
+	#
+
+	if { $have_news && $need_nntp && $EncodeNewsYes } {
+	    set env(NNTPSERVER) $NNTPServer
+	}
+
+	._Encode config -cursor watch
+
+	if { $EncodeFileYes } {
+	    ._Status._Text config -text "Encoding $EFName to File ..."
+	    update
+	    if { [ catch { uu_EncodeToFile $EFPath \
+		    [ file join $EncodeFilePath $EncodeFileName] \
+		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
+		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
+		tk_dialog ._Dialog { Error while Encoding } "The following\
+			error occured while encoding into a file: $message" \
+			error 0 OK
+	    }
+	}
+	if { $EncodeMailYes } {
+	    ._Status._Text config -text "Encoding and Emailing $EFName ..."
+	    update
+	    if { [ catch { uu_EncodeToMail $EFPath $EncodeMailAddr \
+		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
+		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
+		tk_dialog ._Dialog { Error while Encoding } "The following\
+			error occured while sending the file via mail:\
+			$message" \
+			error 0 OK
+	    }
+	}
+	if { $EncodeNewsYes } {
+	    ._Status._Text config -text "Encoding and Emailing $EFName ..."
+	    update
+	    if { [ catch { uu_EncodeToNews $EFPath $EncodeNewsGroup \
+		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
+		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
+		tk_dialog ._Dialog { Error while Encoding } "The following\
+			error occured while sending the file via news:\
+			$message" \
+			error 0 OK
+	    }
+	}
+	#
+	# end of processing
+	#
+	incr index
+    }
+    . config -cursor $oldCursor
+    ._Status._Text config -text $oldText
+    focus $oldFocus
+    destroy ._Encode
+}
+
+#
+# Helper function to decode a bunch of files
+#
+
+proc DecodeProc { DecodeList } {
+    global OptionOverwrite
+    global OptionDesperate
+    global SaveFilePath
+    global FileList
+
+    set count      [ llength $DecodeList ]
+    set oldCursor  [ lindex [ . config -cursor ] 4 ]
+    set oldText    [ lindex [ ._Status._Text config -text ] 4 ]
+
+    if { $DecodeList == {} } {
+	return;
+    }
+
+    if { ! [ CheckWritable $SaveFilePath ] } {
+	return;
+    }
+
+    . config -cursor watch
+
+    for { set index 0 } { $index < $count } { incr index } {
+	set ItemNo     [ lindex $DecodeList $index ]
+	set FileName   [ lindex [ lindex $FileList $ItemNo ] 2 ]
+	set FileNumber [ lindex [ lindex $FileList $ItemNo ] 0 ]
+	set FilePath   [ file join $SaveFilePath $FileName ]
+
+	._Status._Text configure -text "Decoding $FileName ..."
+
+	if { [ file exists $FilePath ] && ! [ file writable $FilePath ] } {
+	    tk_dialog ._Dialog { File Error } "The File $FilePath exists\
+		    and can not be written" error 0 OK
+	    continue
+	} elseif { [ file exists $FilePath ] && ! $OptionOverwrite } {
+	    set answer [ tk_dialog ._Dialog "File Exists" "$FileName\
+		    already exists in $SaveFilePath." question 0 \
+		    "Overwrite" "Next File" "Cancel" ]
+	    if { $answer == "1" } { 
+		continue
+	    } elseif { $answer == "2" } {
+		break
+	    }
+	}
+	#
+	# At this point, the target file either does not exist or
+	# we want to overwrite it
+	#
+
+	update
+
+	set result [ catch { uu_DecodeFile $FileNumber $FilePath } errorMsg ]
+
+	if { $result } {
+	    tk_dialog ._Dialog "Error while Decoding" "The following\
+		    problem occured while decoding: $errorMsg" \
+		    error 0 OK
+	    continue
+	}
+    }
+
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+}
+
+#
+# Button 'Decode'
+#
+
+proc Decode {} {
+    DecodeProc [ ._MainFrame._FileList._Liste curselection ]
+}
+
+#
+# Button 'Decode All'
+#
+
+proc DecodeAll {} {
+    set count [ ._MainFrame._FileList._Liste size ]
+
+    set DecodeList {}
+
+    for { set index 0 } { $index < $count } { incr index } {
+	lappend DecodeList $index
+    }
+
+    DecodeProc $DecodeList
+}
+
+#
+# Action 'Info'
+#
+# Info about a file. This displays either the zeroeth part of a file or
+# the first part up to the first encoded line
+#
+
+proc Info {} {
+    set TheInfoFile [ lindex [ ._MainFrame._FileList._Liste curselection ] 0 ]
+
+    if { $TheInfoFile == {} } {
+	return
+    }
+    InfoFile $TheInfoFile
+}
+
+proc InfoFile { TheInfoFile } {
+    global FileList
+
+    set oldCursor  [ lindex [ . config -cursor ] 4 ]
+    set oldText    [ lindex [ ._Status._Text config -text ] 4 ]
+    set FileName   [ lindex [ lindex $FileList $TheInfoFile ] 2 ]
+    set FileNumber [ lindex [ lindex $FileList $TheInfoFile ] 0 ]
+
+    if { $FileName == "" } {
+	return
+    }
+
+    . config -cursor watch
+    ._Status._Text config -text "Getting File Info for $FileName"
+
+    if { [ catch { .info configure } ] } {
+	toplevel .info
+	frame .info.top
+	frame .info.bot
+	text .info.top.text -relief raised -bd 2 -wrap none \
+		-xscrollcommand ".info.top.sbx set" \
+		-yscrollcommand ".info.top.sby set" 
+	scrollbar .info.top.sbx -command ".info.top.text xview" \
+		-orient horizontal
+	scrollbar .info.top.sby -command ".info.top.text yview"
+
+	pack .info.top.sbx -side bottom -fill x
+	pack .info.top.sby -side right -fill y
+	pack .info.top.text -fill both -expand 1
+
+	button .info.bot.done -text "Done" -command "destroy .info"
+	pack .info.bot.done -side right -padx 4 -pady 4
+
+	pack .info.top -side top -fill both -expand 1
+	pack .info.bot -side bottom
+    }
+
+    wm title .info "Info about [ file tail $FileName ]"
+
+    .info.top.text configure -state normal
+
+    if { [ catch { uu_InfoFile $FileNumber .info.top.text } errorMsg ] } {
+	tk_dialog ._Dialog "No Info" "The following problem occured\
+		while trying to get Info: $errorMsg" error 0 OK
+    }
+
+    .info.top.text configure -state disabled
+
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+}
+
+#
+# Action 'List'
+#
+
+proc List {} {
+    global FileList
+
+    set ListFile [ lindex [ ._MainFrame._FileList._Liste curselection ] 0 ]
+
+    if { $ListFile == {} } {
+	return;
+    }
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+    set FileName  [ lindex [ lindex $FileList $ListFile ] 2 ]
+
+    . config -cursor watch
+    ._Status._Text config -text "Listing $FileName"
+
+    if { [ catch { .list configure } ] } {
+	toplevel .list
+	frame .list.top
+	frame .list.bot
+	text .list.top.text -relief raised -bd 2 -wrap none \
+		-xscrollcommand ".list.top.sbx set" \
+		-yscrollcommand ".list.top.sby set" 
+	scrollbar .list.top.sbx -command ".list.top.text xview" \
+		-orient horizontal
+	scrollbar .list.top.sby -command ".list.top.text yview"
+
+	pack .list.top.sbx -side bottom -fill x
+	pack .list.top.sby -side right -fill y
+	pack .list.top.text -fill both -expand 1
+
+	button .list.bot.done -text "Done" -command "destroy .list"
+	pack .list.bot.done -side right -padx 4 -pady 4
+
+	pack .list.top -side top -fill both -expand 1
+	pack .list.bot -side bottom
+    }
+
+    wm title .list "Listing of [ file tail $FileName ]"
+
+    .list.top.text configure -state normal
+
+    if { [ catch { uu_ListFile $ListFile .list.top.text } errorMsg ] } {
+	tk_dialog ._Dialog "Oops" "The following problem occured\
+		while trying to list the file: $errorMsg" error 0 OK
+    }
+
+    .list.top.text configure -state disabled
+
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+}
+
+#
+# Action 'Rename'
+#
+
+proc Rename {} {
+    global FileList
+    global NewName
+    global OldName
+    global RenBut
+
+    set RenameList [ ._MainFrame._FileList._Liste curselection ]
+    set count      [ llength $RenameList ]
+    set oldCursor  [ lindex [ . config -cursor ] 4 ]
+    set oldText    [ lindex [ ._Status._Text config -text ] 4 ]
+    set oldFocus   [ focus ]
+
+    if { $RenameList == {} } {
+	return;
+    }
+
+    toplevel .rename
+    frame .rename.cur -relief raised -bd 1
+    frame .rename.new -relief raised -bd 1
+    frame .rename.but -relief raised -bd 2
+    frame .rename.but.but
+
+    label .rename.cur.lab -text "Old Name: "
+    entry .rename.cur.nam -width 40 -relief sunken -bd 2 \
+	    -textvariable OldName
+    label .rename.new.lab -text "New Name: "
+    entry .rename.new.nam -width 40 -relief sunken -bd 2 \
+	    -textvariable NewName
+
+    pack .rename.cur.nam -side right -padx 8 -pady 8
+    pack .rename.new.nam -side right -padx 8 -pady 8
+    pack .rename.cur.lab -side left -padx 8 -pady 8 -fill x
+    pack .rename.new.lab -side left -padx 8 -pady 8 -fill x
+
+    button .rename.but.but.ok  -text "Ok"     -command "set RenBut 1"
+    button .rename.but.but.can -text "Cancel" -command "set RenBut 0"
+
+    pack .rename.but.but.ok  -side left -padx 4 -pady 4 -fill x
+    pack .rename.but.but.can -side left -padx 4 -pady 4 -fill x
+    pack .rename.but.but
+
+    pack .rename.cur -side top -fill x
+    pack .rename.new -side top -fill x
+    pack .rename.but -side bottom -fill x
+
+    bind .rename.new.nam <Return> "set RenBut 1"
+
+    wm title .rename "Rename"
+    . config -cursor watch
+    set oldFocus [ focus ]
+    tkwait visibility .rename
+    grab set .rename
+    focus .rename
+
+    for { set index 0 } { $index < $count } { incr index } {
+	set ItemNo     [ lindex $RenameList $index ]
+	set FileName   [ lindex [ lindex $FileList $ItemNo ] 2 ]
+	set FileNumber [ lindex [ lindex $FileList $ItemNo ] 0 ]
+
+	._Status._Text config -text "Renaming $FileName"
+
+	.rename.cur.nam configure -state normal
+	set OldName $FileName
+	set NewName $FileName
+	.rename.cur.nam configure -state disabled
+	set RenBut {}
+	update
+	tkwait variable RenBut
+
+	if { $RenBut == 0 } {
+	    break
+	} elseif { $RenBut == 1 && $NewName != {} } {
+	    if { [ catch { uu_Rename $ItemNo [file tail $NewName] } eMsg ] } {
+		tk_dialog ._Dialog "Oops" "Couldn't rename the file for\
+			the following reason: $eMsg" error 0 OK
+	    }
+	}
+    }
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+    destroy .rename
+    focus $oldFocus
+
+    ShowFileList
+}
+
+#
+# Action 'Execute'
+#
+
+proc Execute {} {
+    global FileList
+    global FileTypes
+    global ExeCom
+    global ExeBut
+
+    ifndef ExeCom {}
+
+    set ListFile [ lindex [ ._MainFrame._FileList._Liste curselection ] 0 ]
+    set app {}
+
+    if { $ListFile == {} } {
+	return;
+    }
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+    set FileName  [ lindex [ lindex $FileList $ListFile ] 2 ]
+    set FileNumb  [ lindex [ lindex $FileList $ListFile ] 0 ]
+    set mimtype   [ lindex [ lindex $FileList $ListFile ] 3 ]
+    set oldFocus  [ focus ]
+
+    . config -cursor watch
+    ._Status._Text config -text "Decoding $FileName to temp file"
+    update
+
+    if { [ catch { uu_GetTempFile $FileNumb } tempFile ] } {
+	tk_dialog ._Dialog "Error while decoding" "The following problem\
+		occured while decoding: $tempFile" \
+		error 0 OK
+    } else {
+	#
+	# Do we have a Content-Type:
+	#
+
+	if { $mimtype != "" } {
+	    set app [ GetTypeAction $mimtype ]
+	}
+
+	#
+	# try to determine app from file extension
+	#
+
+	if { $app == "" } {
+	    set lfn [ split [ string tolower $FileName ] . ]
+	    set ext [ lindex $lfn [ expr [ llength $lfn ] - 1 ] ]
+
+	    if { [ set mimtype [ GetTypeByExtension $ext ] ] != "" } {
+		set app [ GetTypeAction $mimtype ]
+	    }
+	}
+
+	#
+	# if we have no app yet, ask the user
+	#
+
+	if { $app == "" } {
+	    toplevel .app
+	    label .app.msg -wraplength 3i -relief raised -bd 1 -text "Enter \
+		    a command line to execute. Use %s for the file name.\
+		    Do not attempt to background the command."
+
+	    pack .app.msg -side top -ipadx 8 -ipady 8 -fill x
+
+	    frame .app.com
+	    label .app.com.lab -text "Command: "
+	    entry .app.com.ent -relief sunken -bd 2 \
+		    -textvariable ExeCom
+	    pack .app.com.lab -side left -padx 8 -pady 8
+	    pack .app.com.ent -side right -padx 8 -pady 8 -fill x -expand 1
+	    pack .app.com -side top -fill x
+	    
+	    frame .app.but -relief raised -bd 2
+	    frame .app.but.but
+	    button .app.but.but.ok -text "Execute" -command "set ExeBut 1"
+	    button .app.but.but.can -text "Cancel" -command "set ExeBut 0"
+	    pack .app.but.but.ok -side left -padx 4 -pady 4 -fill x
+	    pack .app.but.but.can -side left -padx 4 -pady 4 -fill x
+	    pack .app.but.but
+	    pack .app.but -side bottom -fill x
+
+	    bind .app.com.ent <Return> "set ExeBut 1"
+
+	    wm title .app "Execute Command"
+	    tkwait visibility .app
+	    grab set .app
+	    focus .app
+
+	    ._Status._Text config -text "Watiting for you to enter command"
+	    set ExeBut {}
+	    update
+	    tkwait variable ExeBut
+	    destroy .app
+	    focus $oldFocus
+
+	    if { $ExeBut == 1 } {
+		set app $ExeCom
+	    }
+	}
+
+	if { $app != "" } {
+	    set RunString [ format $app $tempFile ]
+
+	    ._Status._Text config -text "Watiting for child to terminate"
+
+	    update
+
+	    if { [ catch { eval exec $RunString } errorMsg ] } {
+		tk_dialog ._Dialog "Execution failed" "The following problem\
+			occured while executing your command: $errorMsg" \
+			error 0 OK
+	    }
+	}
+    }
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+    focus $oldFocus
+}
+
+#
+# Menu Help->About
+#
+
+proc About {} {
+    global AboutFinish
+    global FrankPic
+
+    set w ._About
+    set AboutFinish {}
+
+    toplevel $w
+    wm title $w "About UUDeview"
+
+    #
+    # don't load the image if less than 256 colors or colormap full
+    #
+
+    if { [ catch { winfo colormapfull $w } cmf ] } {
+	set cmf 0
+    }
+
+    if { [ winfo depth $w ] >= 8 && ! $cmf } {
+	if { ! [ catch { image create photo Frank -data $FrankPic } ] } {
+	    frame $w._Image -relief raised -bd 2
+	    label $w._Image._Frank -image Frank
+	    label $w._Image._Name -text "This Is Me"
+	    pack $w._Image._Frank $w._Image._Name -side top
+	    pack $w._Image -side left -padx 3 -pady 3
+	}
+    }
+    frame $w._Right
+    label $w._Right._Text1 -text "UUDeview Version\
+	[ lindex [ lindex [ uu_Info version ] 0 ] 1 ]" \
+	    -font -Adobe-Helvetica-Bold-R-Normal--*-180-*-*-*-*-*-*
+    label $w._Right._Text2 -text "Written by Frank Pilhofer"
+    label $w._Right._Text3 -text "fp@fpx.de\
+	    \nhttp://www.fpx.de/"
+    label $w._Right._Text4 -text "This software is Freeware and may be\
+	    distributed freely. But if you happen to like it, why not\
+	    surprise the Author with a postcard, sent to" \
+	    -font -Adobe-Helvetica-Bold-R-Normal--*-100-*-*-*-*-*-* \
+	    -wraplength 3i
+    label $w._Right._Addr -text "Frank Pilhofer\nIn Der Wink 3\
+	    \n60437 Frankfurt\nGermany" -justify left
+    button $w._Right._Button -text "Ok" -command { set AboutFinish ok }
+
+    pack $w._Right._Button -fill both -padx 10 -pady 3 -side bottom
+    pack $w._Right._Text1 $w._Right._Text2 $w._Right._Text3 \
+	    $w._Right._Text4 $w._Right._Addr \
+	    -fill both -padx 10 -pady 5 -side top
+    pack $w._Right -fill both
+
+    set oldFocus [ focus ]
+    tkwait visibility $w
+    grab set $w
+    focus $w
+    tkwait variable AboutFinish
+    destroy $w
+    focus $oldFocus
+}
+
+#
+# Menu Help->License
+#
+
+proc License {} {
+    global COPYING
+
+    set oldCursor [ lindex [ . config -cursor ] 4 ]
+    set oldText   [ lindex [ ._Status._Text config -text ] 4 ]
+
+    . config -cursor watch
+    ._Status._Text config -text "Loading and Displaying License"
+
+    if { [ catch { set COPYING } ] } {
+	tk_dialog ._Dialog "Not Available" "I could not load the License\
+		file. You received a copy of the GPL (GNU General Public\
+		License) in the file COPYING along with the UUDeview\
+		distribution. Please refer to this file instead." \
+		error 0 OK
+    } elseif { [ catch { .license configure } ] } {
+	toplevel .license
+	frame .license.top
+	frame .license.bot
+	text .license.top.text -relief raised -bd 2 -wrap none \
+		-xscrollcommand ".license.top.sbx set" \
+		-yscrollcommand ".license.top.sby set" \
+		-font -*-Courier-Medium-R-Normal--*-120-*-*-*-*-*-*
+	scrollbar .license.top.sbx -command ".license.top.text xview" \
+		-orient horizontal
+	scrollbar .license.top.sby -command ".license.top.text yview"
+
+	pack .license.top.sbx -side bottom -fill x
+	pack .license.top.sby -side right -fill y
+	pack .license.top.text -fill both -expand 1
+
+	button .license.bot.done -text "Done" -command "destroy .license"
+	pack .license.bot.done -side right -padx 4 -pady 4
+
+	pack .license.top -side top -fill both -expand 1
+	pack .license.bot -side bottom
+
+	wm title .license "GPL - Gnu General Public License"
+
+	regsub -all "#" $COPYING "" TempText
+
+	.license.top.text insert 1.0 $TempText
+	.license.top.text configure -state disabled
+    }
+
+    ._Status._Text config -text $oldText
+    . config -cursor $oldCursor
+}
+
+##############################################################################
+## Display helper functions
+##############################################################################
+
+#
+# these two procedures are needed to keep 2 listboxes in sync
+#
+
+proc ScrollCommand { args } {
+    eval ._MainFrame._FileList._Status yview $args
+    eval ._MainFrame._FileList._Liste  yview $args
+}
+
+proc UpdateListScroll { idlb1 idlb2 idsb first last } {
+    set InMotion 1
+    if { [ $idlb1 size ] } {
+	set lbnf [ expr $first + 0.5 / [ $idlb1 size ] ]
+    } else {
+	set lbnf $first
+    }
+    $idsb set $first $last
+    
+    $idlb1 yview moveto $lbnf
+    $idlb2 yview moveto $lbnf
+}
+
+proc UpdateSBScroll { idlb1 idlb2 idsb command number { units "" } } {
+    set InMotion 1
+    if { [ $idlb1 size ] } {
+	set lbnf [ expr $number + 0.5 / [ $idlb1 size ] ]
+    } else {
+	set lbnf $number
+    }
+    if { $command == "scroll" } {
+	$idlb1 yview $command $number $units
+	$idlb2 yview $command $number $units
+	update
+    } elseif { $command == "moveto" } {
+	$idlb1 yview $command $lbnf
+	$idlb2 yview $command $lbnf
+	update
+    } else {
+	puts "Unknown Scrolling Command: $view $command $number $units"
+    }
+}
+
+##############################################################################
+## Build our Main Frame
+##############################################################################
+
+#
+# Menu Bar
+#
+
+frame ._MainMenu -relief raised -bd 2
+
+menubutton ._MainMenu._File    -text File    -underline 0 \
+	-menu ._MainMenu._File._Menu
+menubutton ._MainMenu._Options -text Options -underline 0 \
+	-menu ._MainMenu._Options._Menu
+menubutton ._MainMenu._Actions -text Actions -underline 0 \
+	-menu ._MainMenu._Actions._Menu
+menubutton ._MainMenu._Help    -text Help    -underline 0 \
+	-menu ._MainMenu._Help._Menu
+
+menu ._MainMenu._File._Menu
+menu ._MainMenu._Options._Menu
+menu ._MainMenu._Actions._Menu
+menu ._MainMenu._Help._Menu
+
+._MainMenu._File._Menu add command -label "Load ..." -underline 0 \
+	-command "Load"
+._MainMenu._File._Menu add command -label "Encode ..." -underline 0 \
+	-command "Encode"
+._MainMenu._File._Menu add separator
+._MainMenu._File._Menu add command -label "Helpers" -underline 0 \
+	-command "MimeSetup"
+._MainMenu._File._Menu add command -label "Save Setup" -underline 0 \
+	-command "SaveSetup"
+._MainMenu._File._Menu add separator
+._MainMenu._File._Menu add command -label "Quit" -underline 0 \
+	-command "Quit"
+
+._MainMenu._Options._Menu add checkbutton -label "Fast Scanning" \
+	-underline 0 -selectcolor black -variable OptionFast
+._MainMenu._Options._Menu add checkbutton -label "Automatic Overwrite" \
+	-underline 10 -selectcolor black -variable OptionOverwrite
+._MainMenu._Options._Menu add checkbutton -label "Desperate Mode" \
+	-underline 10 -selectcolor black -variable OptionDesperate
+._MainMenu._Options._Menu add checkbutton -label "Verbose Mode" \
+	-underline 0 -selectcolor black -variable OptionVerbose
+._MainMenu._Options._Menu add checkbutton -label "Alternate Bracket Policy" \
+	-underline 0 -selectcolor black -variable OptionBracket
+._MainMenu._Options._Menu add checkbutton -label "Dumb Mode" \
+	-underline 0 -selectcolor black -variable OptionDumbness
+._MainMenu._Options._Menu add checkbutton -label "Handle Text Files" \
+	-underline 0 -selectcolor black -variable OptionUsetext
+._MainMenu._Options._Menu add checkbutton -label "Auto Info" \
+	-underline 5 -selectcolor black -variable OptionAutoInfo
+._MainMenu._Options._Menu add checkbutton -label "Remove Input Files" \
+	-underline 0 -selectcolor black -variable OptionRemove
+._MainMenu._Options._Menu add checkbutton -label "MIME Compliance" \
+	-underline 0 -selectcolor black -variable OptionMoreMime
+
+._MainMenu._Actions._Menu add command -label "Decode" -underline 0 \
+	-command "Decode"
+._MainMenu._Actions._Menu add command -label "Rename" -underline 0 \
+	-command "Rename"
+._MainMenu._Actions._Menu add command -label "Decode All" -underline 7 \
+	-command "DecodeAll"
+._MainMenu._Actions._Menu add command -label "Info" -underline 0 \
+	-command "Info"
+._MainMenu._Actions._Menu add command -label "Execute" -underline 0 \
+	-command "Execute"
+._MainMenu._Actions._Menu add command -label "List Text File" -underline 0 \
+	-command "List"
+
+._MainMenu._Help._Menu add command -label "About ..."   -underline 0 \
+	-command "About"
+._MainMenu._Help._Menu add command -label "License ..." -underline 0 \
+	-command "License"
+#._MainMenu._Help._Menu add command -label "Index ..."   -underline 0 \
+#	-command "Index"
+
+pack ._MainMenu._File ._MainMenu._Options ._MainMenu._Actions \
+	._MainMenu._Help -side left
+pack ._MainMenu._Help -side right
+
+tk_menuBar ._MainMenu ._MainMenu._File ._MainMenu._Options \
+	._MainMenu._Actions ._MainMenu._Help
+
+#
+# middle part, on the left the file listboxes, on the right some buttons
+#
+
+frame ._MainFrame -relief raised -bd 2
+
+#
+# Left: file listboxes and scrollbar
+#
+
+frame ._MainFrame._FileList
+#
+# definition of the second listbox which I couldn't get to work properly
+#
+# Design 1
+#
+#listbox ._MainFrame._FileList._Status -relief sunken -width 4 \
+#	-yscrollcommand "\
+#	UpdateListScroll ._MainFrame._FileList._Status \
+#	                 ._MainFrame._FileList._Liste \
+#                         ._MainFrame._FileList._Scrollbar "
+#listbox ._MainFrame._FileList._Liste -relief sunken -selectmode extended \
+#	-yscrollcommand "\
+#	UpdateListScroll ._MainFrame._FileList._Status \
+#	                 ._MainFrame._FileList._Liste \
+#                         ._MainFrame._FileList._Scrollbar "
+#scrollbar ._MainFrame._FileList._Scrollbar -command " \
+#	UpdateSBScroll ._MainFrame._FileList._Status \
+#	                 ._MainFrame._FileList._Liste \
+#			 ._MainFrame._FileList._Scrollbar "
+#pack ._MainFrame._FileList._Status -side left -padx 8 -pady 8 -fill y
+#
+# Design 2
+#
+#listbox ._MainFrame._FileList._Liste -relief sunken -selectmode extended \
+#	-yscrollcommand "._MainFrame._FileList._Scrollbar set"
+#scrollbar ._MainFrame._FileList._Scrollbar \
+#	-command "._MainFrame._FileList._Liste yview"
+#pack ._MainFrame._FileList._Liste -side left -padx 8 -pady 8 \
+#	-expand true -fill both
+#
+# Design 3
+#
+listbox ._MainFrame._FileList._Status -relief sunken -width 8 \
+	-yscrollcommand { ._MainFrame._FileList._Scrollbar set } \
+	-exportselection false
+listbox ._MainFrame._FileList._Liste -relief sunken -selectmode extended \
+	-yscrollcommand { ._MainFrame._FileList._Scrollbar set } \
+	-exportselection false
+scrollbar ._MainFrame._FileList._Scrollbar \
+	-command ScrollCommand
+pack ._MainFrame._FileList._Status -side left -padx 8 -pady 8 -fill y
+pack ._MainFrame._FileList._Liste -side left -padx 8 -pady 8 \
+	-expand true -fill both
+pack ._MainFrame._FileList._Scrollbar -pady 8 -side right -fill y
+
+if { [ lindex [ ._MainFrame._FileList._Liste configure -width ] 4 ] < 20 } {
+    ._MainFrame._FileList._Liste configure -width 20
+}
+
+#
+# Right: some buttons
+#
+
+frame ._MainFrame._Buttons
+button ._MainFrame._Buttons._Load    -text "Load"    -command "Load"
+button ._MainFrame._Buttons._Decode  -text "Decode"  -command "Decode"
+button ._MainFrame._Buttons._Execute -text "Execute" -command "Execute"
+button ._MainFrame._Buttons._Info    -text "Info"    -command "Info"
+button ._MainFrame._Buttons._Quit    -text "Quit"    -command "Quit"
+
+pack ._MainFrame._Buttons._Load \
+	._MainFrame._Buttons._Decode ._MainFrame._Buttons._Execute \
+	._MainFrame._Buttons._Info   ._MainFrame._Buttons._Quit \
+	-ipadx 4 -ipady 4 -fill x -padx 2 -pady 2
+
+#
+# packe MainFrame
+#
+
+pack ._MainFrame._FileList -side left -expand true -fill both
+pack ._MainFrame._Buttons  -side right -padx 8 -pady 8 -anchor center
+
+#
+# Down: Save Path
+#
+
+frame  ._SPEntry -relief raised -bd 2
+button ._SPEntry._Label -text "Save Path:" -bd 1 -command {
+    set NewPath [ tk_SelectFiles "Savefile Path" 0 2 $SaveFilePath ]
+    if { $NewPath != "" } {
+	if { [ CheckWritable $NewPath ] } {
+	    set SaveFilePath [ CompressSlashes $NewPath ]
+	}
+    }
+}
+entry  ._SPEntry._Path -relief sunken -textvariable SaveFilePath
+pack   ._SPEntry._Label -side left -padx 4 -pady 4
+pack   ._SPEntry._Path -side right -padx 4 -pady 4 -fill x -expand true
+
+#
+# noch weiter unten: Statuszeile
+#
+
+frame ._Status -relief sunken -bd 1
+label ._Status._Desc -text "Status: " \
+	-font -Adobe-Helvetica-Bold-R-Normal--*-100-*-*-*-*-*-*
+label ._Status._Text -text "OK" -justify left -anchor w \
+	-font -Adobe-Helvetica-Bold-R-Normal--*-100-*-*-*-*-*-*
+pack ._Status._Desc -side left -padx 2 -pady 2
+pack ._Status._Text -side left -pady 2 -fill x
+
+#
+# Packe alles zusammen
+#
+
+pack ._MainMenu -side top -fill x
+pack ._Status -side bottom -fill x
+pack ._SPEntry -side bottom -fill x
+pack ._MainFrame -expand true -fill both
+
+#
+# Bindings
+#
+
+bind ._SPEntry._Path <Return> {
+    if { $SaveFilePath == {} } {
+	set SaveFilePath [ pwd ]
+    }
+    set SaveFilePath [ CompressSlashes $SaveFilePath ]
+    CheckWritable $SaveFilePath
+}
+
+#
+# AutoInfo pops up Info about a file whenever the user clicks on it
+#
+
+bind ._MainFrame._FileList._Liste <Button-1> {
+    if { $OptionAutoInfo } {
+	set TheInfoFile [ ._MainFrame._FileList._Liste index @%x,%y ]
+
+	if { $TheInfoFile != "" } {
+	    InfoFile $TheInfoFile
+	}
+    }
+}
+
+#
+# ----------------------------------------------------------------------
+#
+
+#
+# A File Selector Box for multiple files in Tk
+#
+# Frank Pilhofer Feb/Mar 1996
+#
+
+#
+# Default Path and Pattern
+#
+
+set MFSLoadFilterPath [pwd]
+set MFSLoadFilterPattern "*"
+
+#
+# directory separator
+#
+
+if { $tcl_platform(platform) == "windows" } {
+    set ds "\\"
+    set parent ".."
+} elseif { $tcl_platform(platform) == "macintosh" } {
+    set ds ":"
+    set parent ":"
+} else {
+    set ds "/"
+    set parent ".."
+}
+
+##############################################################################
+## General helper functions
+##############################################################################
+
+#
+# Canonicalize a path: compress multiple slashes, remove slash at end,
+#                      expand double-dots and perform tilde expansion
+#
+
+proc CompressSlashes { Path } {
+    global ds parent
+
+    set thepath [ file split $Path ]
+    set lastel  [ expr [ llength $thepath ] - 1 ]
+    set newpat  {}
+    set ignore  0
+
+    set element "."
+    for { set index $lastel } { $index >= 0 } { incr index -1 } {
+	set element [ lindex $thepath $index ]
+
+	if { $element == {} } {
+	} elseif { $element == "." } {
+	} elseif { $element == $parent } {
+	    incr ignore
+	} elseif { $index == 0 && [ string range $element 0 0 ] == "~" } {
+	    set hopath [ file split [ glob -nocomplain $element ] ]
+
+	    if { $hopath == {} } {
+		tk_dialog ._Dialog { User does not exist } "This user does\
+			not exist." {} 0 OK
+	    } elseif { $ignore } {
+		if { $ignore > [ llength $hopath ] } {
+		    set newpat [ linsert $newpat 0 {} ]
+		} else {
+		    set holen [ llength $hopath ]
+		    set newpat [ concat [ lrange $hopath 0 \
+			    [ expr $holen - $ignore - 1 ] ] \
+			    $newpat ]
+		}
+	    } else {
+		set newpat [ concat $hopath $newpat ]
+	    }
+	} elseif { $ignore } {
+	    incr ignore -1
+	} else {
+	    set newpat [ linsert $newpat 0 $element ]
+	}
+    }
+    if { $element == {} } {
+	set newpat [ linsert $newpat 0 {} ]
+    } elseif { $element == $ds } {
+    } elseif { $element == "." || $element == $parent } {
+	if { $ignore } {
+	    set curdir [ file split [ pwd ] ]
+	    if { $ignore > [ llength $curdir ] } {
+		set newpat [ linsert $newpat 0 {} ]
+	    } else {
+		set cdlen [ llength $curdir ]
+		set newpat [ concat [ lrange $curdir 0 \
+			[ expr $cdlen - $ignore - 1 ] ] \
+			$newpat ]
+	    }
+	} else {
+	    set newpat [ linsert $newpat 0 "." ]
+	}
+    } else {
+	set newpat [ linsert $newpat 0 "." ]
+    }
+    set ThePath [ eval file join $newpat ]
+
+#    if { $ThePath == {} } {
+#	set ThePath [ file join "" ]
+#    }
+
+    return $ThePath
+}
+
+#
+# Canonize our search pattern
+#
+
+proc CanonPattern { Pattern } {
+    global MFSLoadFilterPath
+    global MFSLoadFilterPattern
+    global ds parent
+
+    set ThePath [ CompressSlashes $Pattern ]
+    set TheDir  [ file dirname $ThePath ]
+    set TheFile [ file tail $ThePath ]
+
+    # split up by directory and pattern
+
+    if { $TheDir == {} } {
+	set MFSLoadFilterPath "."
+	set MFSLoadFilterPattern "*"
+    } elseif { [ file exists $ThePath ] && [ file isdirectory $ThePath ] } {
+	set MFSLoadFilterPath $ThePath
+	if { $MFSLoadFilterPattern == {} } {
+	    set MFSLoadFilterPattern "*"
+	}
+    } else {
+	set MFSLoadFilterPath $TheDir
+	set MFSLoadFilterPattern $TheFile
+    }
+    set MFSCurPattern [ file join $MFSLoadFilterPath $MFSLoadFilterPattern ]
+
+    return $MFSCurPattern
+}
+
+#
+# Add new value to a listbox if it's not already there
+#
+
+proc AddToLb { lb value } {
+    set count [ $lb size ]
+    for { set index 0 ; set found 0 } { $index < $count } { incr index } {
+	if { [ $lb get $index ] == $value } {
+	    set found 1
+	    break
+	}
+    }
+    if { $found == 0 } {
+	$lb insert end $value
+    }
+}
+
+#
+# Update elements in Listboxes after directory or filter change
+#
+
+proc MFSSelectShow { havefiles } {
+    global MFSLoadFilterPath
+    global MFSLoadFilterPattern
+    global ds parent
+
+    if { $havefiles } {
+	global MFSlbf
+    }
+    global MFSlbd
+
+    if { $havefiles } {
+	$MFSlbf delete 0 end
+    }
+    $MFSlbd delete 0 end
+
+    if { ! [ file readable $MFSLoadFilterPath ] } {
+	tk_dialog ._Dialog { File Error } "You do not have the proper\
+		permissions to browse this Directory: $MFSLoadFilterPath" \
+		{} 0 OK
+	if { [ file pathtype $MFSLoadFilterPath ] == "absolute" } {
+	    if { [ llength [ file split $MFSLoadFilterPath ] ] > 1 } {
+		$MFSlbd insert 0 $parent$ds
+	    }
+	}
+	return
+    }
+    #
+    # insert files into file list
+    #
+    if { $havefiles } {
+	set pat [ file join $MFSLoadFilterPath $MFSLoadFilterPattern ]
+	foreach file [ lsort [ glob -nocomplain -- $pat ] ] {
+	    set basename [ file tail $file ]
+	
+	    if { ! [ file isdirectory $file ] } {
+		$MFSlbf insert end $basename
+	    }
+	}
+    }
+    #
+    # insert directories into directory list
+    #
+    set pat [ file join $MFSLoadFilterPath * ]
+    foreach file [ lsort [ glob -nocomplain -- $pat ] ] {
+	set basename [ file tail $file ]
+	
+	if { [ file isdirectory $file ] } {
+	    append basename /
+	    $MFSlbd insert end $basename
+	}
+    }
+    if { [ file pathtype $MFSLoadFilterPath ] == "absolute" } {
+	if { [ llength [ file split $MFSLoadFilterPath ] ] > 1 } {
+	    $MFSlbd insert 0 $parent$ds
+	}
+    }
+    $MFSlbd insert 0 "./"
+}
+
+proc SelectAddFromList { lb } {
+    global MFSLoadFilterPath
+    global MFSLoadFilterPattern
+    global ds parent
+    global MFSlbi
+    
+    set Selection [ $lb curselection ]
+    set SelItems  [ llength $Selection ]
+    
+    for { set index 0 } { $index < $SelItems } { incr index } {
+	set SelFile [ $lb get [ lindex $Selection $index ] ]
+	set TheFile [ file join $MFSLoadFilterPath $SelFile ]
+	
+	if { ! [ file readable $TheFile ] } {
+	    tk_dialog ._Dialog { File Error } "You do not have the proper\
+		    permissions to read this file or directory: $TheFile" \
+		    {} 0 OK
+	} else {
+	    set TheFile [ CompressSlashes $TheFile ]
+	    if { [ file isdirectory $TheFile ] && $TheFile != $ds } {
+		append TheFile $ds
+	    }
+	    AddToLb $MFSlbi $TheFile
+	}
+    }
+    return 0
+}
+
+##############################################################################
+# Main function
+##############################################################################
+#
+# title:      Title of this dialog box. Printed in the title bar
+# multifile:  whether we allow to select multiple files
+# allowdir:   Whether we allow directories to be selected:
+#             0: no directories may be added to the selection
+#             1: directories may be selected
+#             2: only directories may be selected
+# startpath:  the path where we want the selection to start
+#
+
+proc tk_SelectFiles { title multifile allowdir { startpath "" } } {
+    global MFSLoadFilterPath
+    global MFSLoadFilterPattern
+    global MFSSelectFinish
+    global MFSCurPattern
+    global MFSCurSelection
+    global MFSlbf
+    global MFSlbd
+    global MFSlbi
+    global ds parent
+
+    set MFSLoadFilterPath [ CompressSlashes $MFSLoadFilterPath ]
+    set OldFilterPath $MFSLoadFilterPath
+    set OldFilterPattern $MFSLoadFilterPattern
+    if { $startpath != "" } {
+	set MFSLoadFilterPath [ CompressSlashes $startpath ]
+    }
+    set MFSCurPattern [ file join $MFSLoadFilterPath $MFSLoadFilterPattern ]
+    set MFSSelectFinish {}
+    set MFSCurSelection ""
+
+    set MFSlbf ._Selector._Top._FileList.sub.box
+    set MFSlbd ._Selector._Top._DirList.sub.box
+    set MFSlbi ._Selector._SelList._FileList._List
+
+    toplevel ._Selector
+    wm title ._Selector $title
+    wm minsize ._Selector 300 200
+
+    frame ._Selector._Filter -relief raised -bd 1
+    label ._Selector._Filter._Label -text "Filter:"
+    entry ._Selector._Filter._Filter -relief sunken -textvariable MFSCurPattern
+    pack ._Selector._Filter._Label -side left -padx 4 -pady 4
+    pack ._Selector._Filter._Filter -side right -padx 8 -pady 4 \
+	    -fill x -expand true
+    pack ._Selector._Filter -side top -fill x
+
+    frame ._Selector._Top -relief groove -bd 1
+    frame ._Selector._Top._DirList
+    frame ._Selector._Top._DirList.sub
+
+    label ._Selector._Top._DirList.label -text "Directories"
+    listbox ._Selector._Top._DirList.sub.box -relief sunken \
+	    -xscrollcommand "._Selector._Top._DirList.sub.xsb set" \
+	    -yscrollcommand "._Selector._Top._DirList.sub.ysb set" \
+	    -selectmode normal -height 8
+    scrollbar ._Selector._Top._DirList.sub.xsb -orient horizontal \
+	    -command "._Selector._Top._DirList.sub.box xview"
+    scrollbar ._Selector._Top._DirList.sub.ysb \
+	    -command "._Selector._Top._DirList.sub.box yview"
+
+    pack ._Selector._Top._DirList.sub.xsb -side bottom -fill x
+    pack ._Selector._Top._DirList.sub.ysb -side right  -fill y
+    pack ._Selector._Top._DirList.sub.box -side left -expand true -fill both
+
+    pack ._Selector._Top._DirList.label -side top -anchor w -padx 4
+    pack ._Selector._Top._DirList.sub -side bottom -expand true -fill both
+
+
+    if { $allowdir != 2 } {
+	frame ._Selector._Top._FileList
+	frame ._Selector._Top._FileList.sub
+
+	label ._Selector._Top._FileList.label -text "Files"
+
+	if { $multifile } {
+	    listbox ._Selector._Top._FileList.sub.box -relief sunken \
+		    -xscrollcommand "._Selector._Top._FileList.sub.xsb set" \
+		    -yscrollcommand "._Selector._Top._FileList.sub.ysb set" \
+		    -selectmode extended -height 8
+	} else {
+	    listbox ._Selector._Top._FileList.sub.box -relief sunken \
+		    -xscrollcommand "._Selector._Top._FileList.sub.xsb set" \
+		    -yscrollcommand "._Selector._Top._FileList.sub.ysb set" \
+		    -selectmode normal -height 8
+	}
+	scrollbar ._Selector._Top._FileList.sub.xsb -orient horizontal \
+		-command "._Selector._Top._FileList.sub.box xview"
+	scrollbar ._Selector._Top._FileList.sub.ysb \
+		-command "._Selector._Top._FileList.sub.box yview"
+
+	pack ._Selector._Top._FileList.sub.xsb -side bottom -fill x
+	pack ._Selector._Top._FileList.sub.ysb -side right  -fill y
+	pack ._Selector._Top._FileList.sub.box -side left \
+		-expand true -fill both
+
+	pack ._Selector._Top._FileList.label -side top -anchor w -padx 4
+	pack ._Selector._Top._FileList.sub -side bottom \
+		-expand true -fill both
+    }
+
+    if { $multifile } {
+	frame ._Selector._Top._Buttons
+	frame ._Selector._Top._Buttons.b
+
+	if { $allowdir == 2 } {
+	    button ._Selector._Top._Buttons.b._Add -text "Add" -width 8 \
+		    -command { SelectAddFromList $MFSlbd }
+	} else {
+	    button ._Selector._Top._Buttons.b._Add -text "Add" -width 8 \
+		    -command { SelectAddFromList $MFSlbf }
+
+	    if { $allowdir == 1 } {
+		button ._Selector._Top._Buttons.b._AddPath -text "Add Path" \
+			-width 8 -command { SelectAddFromList $MFSlbd }
+	    }
+	}
+	if { $allowdir != 2 } {
+	    button ._Selector._Top._Buttons.b._AddAll -text "Add All" \
+		    -width 8 -command {
+		set ThePath $MFSLoadFilterPath
+		set count [ $MFSlbf size ]
+		if { $ThePath != $ds } { append ThePath $ds }
+		for { set index 0 } { $index < $count} { incr index } {
+		    set TheFile $ThePath
+		    append TheFile [ $MFSlbf get $index ]
+		    AddToLb $MFSlbi $TheFile
+		}
+	    }
+	}
+
+	if { $allowdir == 1 } {
+	    pack ._Selector._Top._Buttons.b._Add \
+		    ._Selector._Top._Buttons.b._AddPath \
+		    ._Selector._Top._Buttons.b._AddAll \
+		    -side left -ipadx 4 -ipady 4 -fill x -padx 2 -pady 2
+	} elseif { $allowdir == 2 } {
+	    pack ._Selector._Top._Buttons.b._Add \
+		    -side left -ipadx 4 -ipady 4 -fill x -padx 2 -pady 2
+	} else {
+	    pack ._Selector._Top._Buttons.b._Add \
+		    ._Selector._Top._Buttons.b._AddAll \
+		    -side left -ipadx 4 -ipady 4 -fill x -padx 2 -pady 2
+	}
+
+	pack ._Selector._Top._Buttons.b
+    }
+
+    if { $multifile } {
+	pack ._Selector._Top._Buttons -side bottom -fill x -padx 4 -pady 4
+    }
+
+    pack ._Selector._Top._DirList -side left -expand true -fill both -padx 4
+
+    if { $allowdir != 2 } {
+	pack ._Selector._Top._FileList -side right -expand true \
+		-fill both -padx 4
+    }
+
+    if { $multifile } {
+	frame ._Selector._SelList -relief groove -bd 1
+	frame ._Selector._SelList._FileList
+	frame ._Selector._SelList._Buttons -bd 4
+
+	label ._Selector._SelList._Label -text "Selected Files" -relief groove
+
+	listbox ._Selector._SelList._FileList._List -relief sunken \
+		-xscrollcommand "._Selector._SelList._FileList._XScrollbar set" \
+		-yscrollcommand "._Selector._SelList._FileList._YScrollbar set" \
+		-selectmode extended -height 4
+	scrollbar ._Selector._SelList._FileList._XScrollbar -orient horizontal \
+		-command "._Selector._SelList._FileList._List xview"
+	scrollbar ._Selector._SelList._FileList._YScrollbar \
+		-command "._Selector._SelList._FileList._List yview"
+
+	pack ._Selector._SelList._FileList._XScrollbar -side bottom -fill x
+	pack ._Selector._SelList._FileList._YScrollbar -side right  -fill y
+	pack ._Selector._SelList._FileList._List -side left -expand true \
+		-fill both
+
+	button ._Selector._SelList._Buttons._Remove -text "Remove" -width 8 \
+		-command {
+	    set Selection [ $MFSlbi curselection ]
+	    set count 0
+	    foreach index $Selection {
+		$MFSlbi delete [ expr $index - $count ]
+		incr count
+	    }
+	}
+
+	pack ._Selector._SelList._Buttons._Remove -ipadx 4 -ipady 4 -fill x \
+		-padx 2 -pady 2 -anchor center
+
+	pack ._Selector._SelList._Label -side top -fill x -padx 4 -pady 4
+	pack ._Selector._SelList._FileList -side left -expand true -fill both \
+		-padx 4 -pady 4
+	pack ._Selector._SelList._Buttons -side right -padx 4 -pady 4
+    } else {
+	frame ._Selector._Selection -relief groove -bd 1
+	label ._Selector._Selection.lab -text "Selection"
+	entry ._Selector._Selection.ent -relief sunken \
+		-textvariable MFSCurSelection
+	pack ._Selector._Selection.ent -side bottom -padx 4 -fill x
+	pack ._Selector._Selection.lab -side bottom -anchor w -padx 4
+    }
+
+    frame ._Selector._Buttons -relief raised -bd 1
+    frame ._Selector._Buttons.b
+
+    if { $multifile } {
+	button ._Selector._Buttons.b._Ok -text "Ok" -width 8 -command { 
+	    set MFSSelectFinish ok 
+	}
+    } else {
+	if { $allowdir == 0 } {
+	    button ._Selector._Buttons.b._Ok -text "Ok" -width 8 -command {
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] || \
+			[ file isdirectory $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist, is not readable or is a\
+			    directory" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	} elseif { $allowdir == 2 } {
+	    button ._Selector._Buttons.b._Ok -text "Ok" -width 8 -command {
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] || \
+			! [ file isdirectory $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist, is not readable or is not a\
+			    directory" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	} else {
+	    button ._Selector._Buttons.b._Ok -text "Ok" -width 8 -command {
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist or is not readable" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	}
+    }
+    if { $allowdir != 2 } {
+	button ._Selector._Buttons.b._Filter -text "Filter" -width 8 -command {
+	    set MFSCurPattern [ CanonPattern $MFSCurPattern ]
+	    MFSSelectShow 1
+	}
+    } else {
+	button ._Selector._Buttons.b._Filter -text "Filter" -width 8 -command {
+	    set MFSCurPattern [ CanonPattern $MFSCurPattern ]
+	    MFSSelectShow 0
+	}
+    }
+    button ._Selector._Buttons.b._Cancel -text "Cancel" -width 8 \
+	    -command { set MFSSelectFinish cancel }
+    
+    pack ._Selector._Buttons.b._Ok \
+	    ._Selector._Buttons.b._Filter \
+	    ._Selector._Buttons.b._Cancel \
+	    -side left -ipadx 4 -ipady 4 -padx 4 -pady 4
+    pack ._Selector._Buttons.b
+
+    pack ._Selector._Top -side top -expand true -fill both -ipadx 8 -ipady 8
+
+    if { $multifile } {
+	pack ._Selector._SelList -side top -expand true -fill both \
+		-ipadx 8 -ipady 8
+    } else {
+	pack ._Selector._Selection -side top -fill both -ipadx 8 -ipady 4
+    }
+    pack ._Selector._Buttons -side bottom -fill x
+
+    #
+    # the items are up on screen. define bindings
+    # 
+
+    if { $allowdir != 2 } {
+	bind ._Selector._Filter._Filter <Return> {
+	    set MFSCurPattern [ CanonPattern $MFSCurPattern ]
+	    MFSSelectShow 1
+	}
+    } else {
+	bind ._Selector._Filter._Filter <Return> {
+	    set MFSCurPattern [ CanonPattern $MFSCurPattern ]
+	    MFSSelectShow 0
+	}
+    }
+    if { $multifile } {
+	if { $allowdir != 2 } {
+	    bind $MFSlbd <Double-Button-1> {
+		set Selection [ lindex [ $MFSlbd curselection ] 0 ]
+
+		if { $Selection != "" } {
+		    set TheFile [ $MFSlbd get $Selection ]
+		    set MFSLoadFilterPath [ CompressSlashes \
+			    [ file join $MFSLoadFilterPath $TheFile ] ]
+		    set MFSCurPattern [ \
+			    file join $MFSLoadFilterPath $MFSLoadFilterPattern]
+		    MFSSelectShow 1
+		}
+	    }
+	} else {
+	    bind $MFSlbd <Double-Button-1> {
+		set Selection [ lindex [ $MFSlbd curselection ] 0 ]
+
+		if { $Selection != "" } {
+		    set TheFile [ $MFSlbd get $Selection ]
+		    set MFSLoadFilterPath [ CompressSlashes \
+			    [ file join $MFSLoadFilterPath $TheFile ] ]
+		    set MFSCurPattern [ \
+			    file join $MFSLoadFilterPath $MFSLoadFilterPattern]
+		    MFSSelectShow 0
+		}
+	    }
+	}
+	if { $allowdir != 2 } {
+	    bind $MFSlbf <Double-Button-1> {
+		SelectAddFromList $MFSlbf
+	    }
+	}
+    } else {
+	if { $allowdir != 2 } {
+	    bind $MFSlbd <Double-Button-1> {
+		set Selection [ lindex [ $MFSlbd curselection ] 0 ]
+
+		if { $Selection != "" } {
+		    set TheFile [ $MFSlbd get $Selection ]
+		    set MFSLoadFilterPath [ CompressSlashes \
+			    [ file join $MFSLoadFilterPath $TheFile ] ]
+		    set MFSCurPattern [ \
+			    file join $MFSLoadFilterPath $MFSLoadFilterPattern]
+		    MFSSelectShow 1
+		}
+	    }
+	} else {
+	    bind $MFSlbd <Double-Button-1> {
+		set Selection [ lindex [ $MFSlbd curselection ] 0 ]
+
+		if { $Selection != "" } {
+		    set TheFile [ $MFSlbd get $Selection ]
+		    set MFSLoadFilterPath [ CompressSlashes \
+			    [ file join $MFSLoadFilterPath $TheFile ] ]
+		    set MFSCurPattern [ \
+			    file join $MFSLoadFilterPath $MFSLoadFilterPattern]
+		    MFSSelectShow 0
+		}
+	    }
+	}
+    }
+    if { ! $multifile } {
+	if { $allowdir } {
+	    bind $MFSlbd <Button-1> {
+		set Selection [ $MFSlbd index  @%x,%y ]
+		set TheFile   [ $MFSlbd get $Selection ]
+
+		if { $TheFile != "" } {
+		    set MFSCurSelection [ \
+			    file join $MFSLoadFilterPath $TheFile ]$ds
+		}
+	    }
+	}
+	if { $allowdir != 2 } {
+	    bind $MFSlbf <Button-1> {
+		set Selection [ $MFSlbf index  @%x,%y ]
+		set TheFile   [ $MFSlbf get $Selection ]
+
+		if { $TheFile != "" } {
+		    set MFSCurSelection [ \
+			    file join $MFSLoadFilterPath $TheFile ]
+		}
+	    }
+	    bind $MFSlbf <Double-Button-1> {
+		set Selection [ lindex [ $MFSlbf curselection ] 0 ]
+
+		if { $Selection != "" } {
+		    set TheFile [ $MFSlbf get $Selection ]
+
+		    set MFSCurSelection [ \
+			    file join $MFSLoadFilterPath $TheFile ]
+		    set MFSSelectFinish ok
+		}
+	    }
+	}
+	if { $allowdir == 0 } {
+	    bind ._Selector._Selection.ent <Return> {
+		set MFSCurSelection [ CompressSlashes $MFSCurSelection ]
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] || \
+			[ file isdirectory $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist, is not readable or is a\
+			    directory" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	} elseif { $allowdir == 2 } {
+	    bind ._Selector._Selection.ent <Return> {
+		set MFSCurSelection [ CompressSlashes $MFSCurSelection ]
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] || \
+			! [ file isdirectory $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist, is not readable or is not a\
+			    directory" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	} else {
+	    bind ._Selector._Selection.ent <Return> {
+		set MFSCurSelection [ CompressSlashes $MFSCurSelection ]
+		if { ! [ file exists $MFSCurSelection ] || \
+			! [ file readable $MFSCurSelection ] } {
+		    tk_dialog ._Dialog { Invalid Choice } "$MFSCurSelection\
+			    does not exist or is not readable" {} 0 OK
+		} else {
+		    set MFSSelectFinish ok
+		}
+	    }
+	}
+    }
+
+    if { $allowdir != 2 } {
+	MFSSelectShow 1
+    } else {
+	MFSSelectShow 0
+    }
+
+    set oldFocus [ focus ]
+    tkwait visibility ._Selector
+    grab set ._Selector
+    focus ._Selector
+    tkwait variable MFSSelectFinish
+
+    set FileList {}
+
+    if { $MFSSelectFinish == "cancel" } {
+	set MFSLoadFilterPath $OldFilterPath
+	set MFSLoadFilterPattern $OldFilterPattern
+    } else {
+	if { $multifile } {
+	    set count [ ._Selector._SelList._FileList._List size ]
+
+	    for { set index 0 } { $index < $count } { incr index } {
+		lappend FileList \
+			[ ._Selector._SelList._FileList._List get $index ]
+	    }
+	} else {
+	    set FileList $MFSCurSelection
+	}
+    }
+
+    destroy ._Selector
+    focus $oldFocus
+    return $FileList
+}
+
+#
+# ----------------------------------------------------------------------
+#
+
+set FrankPic "
+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
+BPGSvMYA5AHOMK4a0e0aDyAIAAA7
+"
+
+#
+# ----------------------------------------------------------------------
+#
+
+catch { set COPYING "#		    GNU GENERAL PUBLIC LICENSE\n\
+#		       Version 2, June 1991\n\
+#\n\
+# Copyright (C) 1989, 1991 Free Software Foundation, Inc.\n\
+#                          675 Mass Ave, Cambridge, MA 02139, USA\n\
+# Everyone is permitted to copy and distribute verbatim copies\n\
+# of this license document, but changing it is not allowed.\n\
+#\n\
+#			    Preamble\n\
+#\n\
+#  The licenses for most software are designed to take away your\n\
+#freedom to share and change it.  By contrast, the GNU General Public\n\
+#License is intended to guarantee your freedom to share and change free\n\
+#software--to make sure the software is free for all its users.  This\n\
+#General Public License applies to most of the Free Software\n\
+#Foundation's software and to any other program whose authors commit to\n\
+#using it.  (Some other Free Software Foundation software is covered by\n\
+#the GNU Library General Public License instead.)  You can apply it to\n\
+#your programs, too.\n\
+#\n\
+#  When we speak of free software, we are referring to freedom, not\n\
+#price.  Our General Public Licenses are designed to make sure that you\n\
+#have the freedom to distribute copies of free software (and charge for\n\
+#this service if you wish), that you receive source code or can get it\n\
+#if you want it, that you can change the software or use pieces of it\n\
+#in new free programs; and that you know you can do these things.\n\
+#\n\
+#  To protect your rights, we need to make restrictions that forbid\n\
+#anyone to deny you these rights or to ask you to surrender the rights.\n\
+#These restrictions translate to certain responsibilities for you if you\n\
+#distribute copies of the software, or if you modify it.\n\
+#\n\
+#  For example, if you distribute copies of such a program, whether\n\
+#gratis or for a fee, you must give the recipients all the rights that\n\
+#you have.  You must make sure that they, too, receive or can get the\n\
+#source code.  And you must show them these terms so they know their\n\
+#rights.\n\
+#\n\
+#  We protect your rights with two steps: (1) copyright the software, and\n\
+#(2) offer you this license which gives you legal permission to copy,\n\
+#distribute and/or modify the software.\n\
+#\n\
+#  Also, for each author's protection and ours, we want to make certain\n\
+#that everyone understands that there is no warranty for this free\n\
+#software.  If the software is modified by someone else and passed on, we\n\
+#want its recipients to know that what they have is not the original, so\n\
+#that any problems introduced by others will not reflect on the original\n\
+#authors' reputations.\n\
+#\n\
+#  Finally, any free program is threatened constantly by software\n\
+#patents.  We wish to avoid the danger that redistributors of a free\n\
+#program will individually obtain patent licenses, in effect making the\n\
+#program proprietary.  To prevent this, we have made it clear that any\n\
+#patent must be licensed for everyone's free use or not licensed at all.\n\
+#\n\
+#  The precise terms and conditions for copying, distribution and\n\
+#modification follow.\n\
+#\n\
+#		    GNU GENERAL PUBLIC LICENSE\n\
+#   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION\n\
+#\n\
+#  0. This License applies to any program or other work which contains\n\
+#a notice placed by the copyright holder saying it may be distributed\n\
+#under the terms of this General Public License.  The \"Program\", below,\n\
+#refers to any such program or work, and a \"work based on the Program\"\n\
+#means either the Program or any derivative work under copyright law:\n\
+#that is to say, a work containing the Program or a portion of it,\n\
+#either verbatim or with modifications and/or translated into another\n\
+#language.  (Hereinafter, translation is included without limitation in\n\
+#the term \"modification\".)  Each licensee is addressed as \"you\".\n\
+#\n\
+#Activities other than copying, distribution and modification are not\n\
+#covered by this License; they are outside its scope.  The act of\n\
+#running the Program is not restricted, and the output from the Program\n\
+#is covered only if its contents constitute a work based on the\n\
+#Program (independent of having been made by running the Program).\n\
+#Whether that is true depends on what the Program does.\n\
+#\n\
+#  1. You may copy and distribute verbatim copies of the Program's\n\
+#source code as you receive it, in any medium, provided that you\n\
+#conspicuously and appropriately publish on each copy an appropriate\n\
+#copyright notice and disclaimer of warranty; keep intact all the\n\
+#notices that refer to this License and to the absence of any warranty;\n\
+#and give any other recipients of the Program a copy of this License\n\
+#along with the Program.\n\
+#\n\
+#You may charge a fee for the physical act of transferring a copy, and\n\
+#you may at your option offer warranty protection in exchange for a fee.\n\
+#\n\
+#  2. You may modify your copy or copies of the Program or any portion\n\
+#of it, thus forming a work based on the Program, and copy and\n\
+#distribute such modifications or work under the terms of Section 1\n\
+#above, provided that you also meet all of these conditions:\n\
+#\n\
+#    a) You must cause the modified files to carry prominent notices\n\
+#    stating that you changed the files and the date of any change.\n\
+#\n\
+#    b) You must cause any work that you distribute or publish, that in\n\
+#    whole or in part contains or is derived from the Program or any\n\
+#    part thereof, to be licensed as a whole at no charge to all third\n\
+#    parties under the terms of this License.\n\
+#\n\
+#    c) If the modified program normally reads commands interactively\n\
+#    when run, you must cause it, when started running for such\n\
+#    interactive use in the most ordinary way, to print or display an\n\
+#    announcement including an appropriate copyright notice and a\n\
+#    notice that there is no warranty (or else, saying that you provide\n\
+#    a warranty) and that users may redistribute the program under\n\
+#    these conditions, and telling the user how to view a copy of this\n\
+#    License.  (Exception: if the Program itself is interactive but\n\
+#    does not normally print such an announcement, your work based on\n\
+#    the Program is not required to print an announcement.)\n\
+#\n\
+#These requirements apply to the modified work as a whole.  If\n\
+#identifiable sections of that work are not derived from the Program,\n\
+#and can be reasonably considered independent and separate works in\n\
+#themselves, then this License, and its terms, do not apply to those\n\
+#sections when you distribute them as separate works.  But when you\n\
+#distribute the same sections as part of a whole which is a work based\n\
+#on the Program, the distribution of the whole must be on the terms of\n\
+#this License, whose permissions for other licensees extend to the\n\
+#entire whole, and thus to each and every part regardless of who wrote it.\n\
+#\n\
+#Thus, it is not the intent of this section to claim rights or contest\n\
+#your rights to work written entirely by you; rather, the intent is to\n\
+#exercise the right to control the distribution of derivative or\n\
+#collective works based on the Program.\n\
+#\n\
+#In addition, mere aggregation of another work not based on the Program\n\
+#with the Program (or with a work based on the Program) on a volume of\n\
+#a storage or distribution medium does not bring the other work under\n\
+#the scope of this License.\n\
+#\n\
+#  3. You may copy and distribute the Program (or a work based on it,\n\
+#under Section 2) in object code or executable form under the terms of\n\
+#Sections 1 and 2 above provided that you also do one of the following:\n\
+#\n\
+#    a) Accompany it with the complete corresponding machine-readable\n\
+#    source code, which must be distributed under the terms of Sections\n\
+#    1 and 2 above on a medium customarily used for software interchange; or,\n\
+#\n\
+#    b) Accompany it with a written offer, valid for at least three\n\
+#    years, to give any third party, for a charge no more than your\n\
+#    cost of physically performing source distribution, a complete\n\
+#    machine-readable copy of the corresponding source code, to be\n\
+#    distributed under the terms of Sections 1 and 2 above on a medium\n\
+#    customarily used for software interchange; or,\n\
+#\n\
+#    c) Accompany it with the information you received as to the offer\n\
+#    to distribute corresponding source code.  (This alternative is\n\
+#    allowed only for noncommercial distribution and only if you\n\
+#    received the program in object code or executable form with such\n\
+#    an offer, in accord with Subsection b above.)\n\
+#\n\
+#The source code for a work means the preferred form of the work for\n\
+#making modifications to it.  For an executable work, complete source\n\
+#code means all the source code for all modules it contains, plus any\n\
+#associated interface definition files, plus the scripts used to\n\
+#control compilation and installation of the executable.  However, as a\n\
+#special exception, the source code distributed need not include\n\
+#anything that is normally distributed (in either source or binary\n\
+#form) with the major components (compiler, kernel, and so on) of the\n\
+#operating system on which the executable runs, unless that component\n\
+#itself accompanies the executable.\n\
+#\n\
+#If distribution of executable or object code is made by offering\n\
+#access to copy from a designated place, then offering equivalent\n\
+#access to copy the source code from the same place counts as\n\
+#distribution of the source code, even though third parties are not\n\
+#compelled to copy the source along with the object code.\n\
+#\n\
+#  4. You may not copy, modify, sublicense, or distribute the Program\n\
+#except as expressly provided under this License.  Any attempt\n\
+#otherwise to copy, modify, sublicense or distribute the Program is\n\
+#void, and will automatically terminate your rights under this License.\n\
+#However, parties who have received copies, or rights, from you under\n\
+#this License will not have their licenses terminated so long as such\n\
+#parties remain in full compliance.\n\
+#\n\
+#  5. You are not required to accept this License, since you have not\n\
+#signed it.  However, nothing else grants you permission to modify or\n\
+#distribute the Program or its derivative works.  These actions are\n\
+#prohibited by law if you do not accept this License.  Therefore, by\n\
+#modifying or distributing the Program (or any work based on the\n\
+#Program), you indicate your acceptance of this License to do so, and\n\
+#all its terms and conditions for copying, distributing or modifying\n\
+#the Program or works based on it.\n\
+#\n\
+#  6. Each time you redistribute the Program (or any work based on the\n\
+#Program), the recipient automatically receives a license from the\n\
+#original licensor to copy, distribute or modify the Program subject to\n\
+#these terms and conditions.  You may not impose any further\n\
+#restrictions on the recipients' exercise of the rights granted herein.\n\
+#You are not responsible for enforcing compliance by third parties to\n\
+#this License.\n\
+#\n\
+#  7. If, as a consequence of a court judgment or allegation of patent\n\
+#infringement or for any other reason (not limited to patent issues),\n\
+#conditions are imposed on you (whether by court order, agreement or\n\
+#otherwise) that contradict the conditions of this License, they do not\n\
+#excuse you from the conditions of this License.  If you cannot\n\
+#distribute so as to satisfy simultaneously your obligations under this\n\
+#License and any other pertinent obligations, then as a consequence you\n\
+#may not distribute the Program at all.  For example, if a patent\n\
+#license would not permit royalty-free redistribution of the Program by\n\
+#all those who receive copies directly or indirectly through you, then\n\
+#the only way you could satisfy both it and this License would be to\n\
+#refrain entirely from distribution of the Program.\n\
+#\n\
+#If any portion of this section is held invalid or unenforceable under\n\
+#any particular circumstance, the balance of the section is intended to\n\
+#apply and the section as a whole is intended to apply in other\n\
+#circumstances.\n\
+#\n\
+#It is not the purpose of this section to induce you to infringe any\n\
+#patents or other property right claims or to contest validity of any\n\
+#such claims; this section has the sole purpose of protecting the\n\
+#integrity of the free software distribution system, which is\n\
+#implemented by public license practices.  Many people have made\n\
+#generous contributions to the wide range of software distributed\n\
+#through that system in reliance on consistent application of that\n\
+#system; it is up to the author/donor to decide if he or she is willing\n\
+#to distribute software through any other system and a licensee cannot\n\
+#impose that choice.\n\
+#\n\
+#This section is intended to make thoroughly clear what is believed to\n\
+#be a consequence of the rest of this License.\n\
+#\n\
+#  8. If the distribution and/or use of the Program is restricted in\n\
+#certain countries either by patents or by copyrighted interfaces, the\n\
+#original copyright holder who places the Program under this License\n\
+#may add an explicit geographical distribution limitation excluding\n\
+#those countries, so that distribution is permitted only in or among\n\
+#countries not thus excluded.  In such case, this License incorporates\n\
+#the limitation as if written in the body of this License.\n\
+#\n\
+#  9. The Free Software Foundation may publish revised and/or new versions\n\
+#of the General Public License from time to time.  Such new versions will\n\
+#be similar in spirit to the present version, but may differ in detail to\n\
+#address new problems or concerns.\n\
+#\n\
+#Each version is given a distinguishing version number.  If the Program\n\
+#specifies a version number of this License which applies to it and \"any\n\
+#later version\", you have the option of following the terms and conditions\n\
+#either of that version or of any later version published by the Free\n\
+#Software Foundation.  If the Program does not specify a version number of\n\
+#this License, you may choose any version ever published by the Free Software\n\
+#Foundation.\n\
+#\n\
+#  10. If you wish to incorporate parts of the Program into other free\n\
+#programs whose distribution conditions are different, write to the author\n\
+#to ask for permission.  For software which is copyrighted by the Free\n\
+#Software Foundation, write to the Free Software Foundation; we sometimes\n\
+#make exceptions for this.  Our decision will be guided by the two goals\n\
+#of preserving the free status of all derivatives of our free software and\n\
+#of promoting the sharing and reuse of software generally.\n\
+#\n\
+#			    NO WARRANTY\n\
+#\n\
+#  11. BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY\n\
+#FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN\n\
+#OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES\n\
+#PROVIDE THE PROGRAM \"AS IS\" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED\n\
+#OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF\n\
+#MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE ENTIRE RISK AS\n\
+#TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU.  SHOULD THE\n\
+#PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,\n\
+#REPAIR OR CORRECTION.\n\
+#\n\
+#  12. IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING\n\
+#WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR\n\
+#REDISTRIBUTE THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,\n\
+#INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING\n\
+#OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED\n\
+#TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY\n\
+#YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER\n\
+#PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE\n\
+#POSSIBILITY OF SUCH DAMAGES.\n\
+#\n\
+#		     END OF TERMS AND CONDITIONS\n\
+#\n\
+#	Appendix: How to Apply These Terms to Your New Programs\n\
+#\n\
+#  If you develop a new program, and you want it to be of the greatest\n\
+#possible use to the public, the best way to achieve this is to make it\n\
+#free software which everyone can redistribute and change under these terms.\n\
+#\n\
+#  To do so, attach the following notices to the program.  It is safest\n\
+#to attach them to the start of each source file to most effectively\n\
+#convey the exclusion of warranty; and each file should have at least\n\
+#the \"copyright\" line and a pointer to where the full notice is found.\n\
+#\n\
+#    <one line to give the program's name and a brief idea of what it does.>\n\
+#    Copyright (C) 19yy  <name of author>\n\
+#\n\
+#    This program is free software; you can redistribute it and/or modify\n\
+#    it under the terms of the GNU General Public License as published by\n\
+#    the Free Software Foundation; either version 2 of the License, or\n\
+#    (at your option) any later version.\n\
+#\n\
+#    This program is distributed in the hope that it will be useful,\n\
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of\n\
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n\
+#    GNU General Public License for more details.\n\
+#\n\
+#    You should have received a copy of the GNU General Public License\n\
+#    along with this program; if not, write to the Free Software\n\
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n\
+#\n\
+#Also add information on how to contact you by electronic and paper mail.\n\
+#\n\
+#If the program is interactive, make it output a short notice like this\n\
+#when it starts in an interactive mode:\n\
+#\n\
+#    Gnomovision version 69, Copyright (C) 19yy name of author\n\
+#    Gnomovision comes with ABSOLUTELY NO WARRANTY; for details type `show w'.\n\
+#    This is free software, and you are welcome to redistribute it\n\
+#    under certain conditions; type `show c' for details.\n\
+#\n\
+#The hypothetical commands `show w' and `show c' should show the appropriate\n\
+#parts of the General Public License.  Of course, the commands you use may\n\
+#be called something other than `show w' and `show c'; they could even be\n\
+#mouse-clicks or menu items--whatever suits your program.\n\
+#\n\
+#You should also get your employer (if you work as a programmer) or your\n\
+#school, if any, to sign a \"copyright disclaimer\" for the program, if\n\
+#necessary.  Here is a sample; alter the names:\n\
+#\n\
+#  Yoyodyne, Inc., hereby disclaims all copyright interest in the program\n\
+#  `Gnomovision' (which makes passes at compilers) written by James Hacker.\n\
+#\n\
+#  <signature of Ty Coon>, 1 April 1989\n\
+#  Ty Coon, President of Vice\n\
+#\n\
+#This General Public License does not permit incorporating your program into\n\
+#proprietary programs.  If your program is a subroutine library, you may\n\
+#consider it more useful to permit linking proprietary applications with the\n\
+#library.  If this is what you want to do, use the GNU Library General\n\
+#Public License instead of this License.\n\
+#\n\
+#"
+}
+
+
+#
+# ----------------------------------------------------------------------
+#
+
+#
+# set a trace on OptionDesperate, because the FileList might change
+# with desperateness
+#
+
+proc VarTrace { name element op } { ShowFileList }
+trace variable OptionDesperate w VarTrace
+
+#
+# Set Window title
+#
+
+wm minsize . 300 250
+wm title . "UUDeview for X"
+
+#
+# Set Message Callback
+#
+
+uu_SetMessageProc DisplayMessage
+
+#
+# Set Busy Callback: update every 100 msecs
+#
+
+uu_SetBusyProc WeAreBusy 100
+
+#
+# Handle Command line arguments
+#
+
+set FilesToLoad {}
+set setpath 0
+
+foreach arg $argv {
+    if { $setpath } {
+	set setpath 0
+	set SaveFilePath $arg
+    }
+    if { [ string index $arg 0 ] == "-" } {
+	switch [ string index $arg 1 ] {
+	    f { set OptionFast 1 }
+	    b { set OptionBracket 1 }
+	    o { set OptionOverwrite 1 }
+	    d { set OptionDesperate 1 }
+	    v { set OptionVerbose 0 }
+	    p { set setpath 1 }
+	    s { set OptionDumbness 1 }
+	    t { set OptionUsetext 1 }
+	    z { set OptionMoreMime 1 }
+	    c { set OptionRemove 1 }
+	    default {
+		tk_dialog ._Dialog { Invalid Switch } "Invalid switch\
+			found on command line: $arg" warning 0 OK
+	    }
+	}
+    } else {
+	lappend FilesToLoad $arg
+    }
+}
+
+if { $FilesToLoad != {} } {
+    LoadFiles $FilesToLoad
+    ShowFileList
+    if { $OptionVerbose } {
+	DumpFileList
+    }
+}
+
+#
+# Initialize Listbox
+#
+
+ShowFileList
+
+#
+# go into event loop
+#
+
+vwait forever

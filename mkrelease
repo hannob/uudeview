@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# Brand new version. Quite an effort to update all related files
+# $Id: mkrelease,v 1.2 1996/07/20 21:41:01 fp Exp $
+#
+if [ $# != 1 ] ; then
+	echo usage: $0 major.minor.pl
+	exit 1
+fi
+
+version=$1
+MAJOR=`echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/\1/'`
+MINOR=`echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/\2/'`
+PATCH=`echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/\3/'`
+
+echo branding release $MAJOR.$MINOR.$PATCH
+
+for file in README IAFA-PACKAGE ; do
+	if [ -r $file ] ; then
+		echo -n "patching $file ... "
+		sed "s/\(Version[^0-9]*\).*/\1$version/" < $file > $file.temp
+		mv $file.temp $file
+		echo done.
+	fi
+done
+
+file=uudeview.lsm
+if [ -r $file ] ; then
+	echo -n "patching $file ... "
+	sed -e "s/\(Version[^0-9]*\).*/\1$version/" \
+	    -e "s/uudeview-[0-9]*\.[0-9]*\.[0-9]*/uudeview-$version/" \
+	    -e "s^\(Entered-date[^0-9]*\).*^\1`date +%x`^" \
+		< $file > $file.temp
+	mv $file.temp $file
+	echo done.
+fi
+
+file=HISTORY
+if [ -r $file ] ; then
+	echo -n "patching $file ... "
+	sed "s/^ $version.*/ $version (`date +%d.%m.%Y`)/" \
+		< $file > $file.temp
+	mv $file.temp $file
+	echo done.
+fi
+
+file=doc/library.ltx
+if [ -r $file ] ; then
+	echo -n "patching $file ... "
+	sed -e 's/^\(\\providecommand{\\uuversion}\){.*}/\1'"{$MAJOR.$MINOR}/"\
+	    -e 's/^\(\\providecommand{\\uupatch}\){.*}/\1'"{$PATCH}/" \
+		< $file > $file.temp
+	mv $file.temp $file
+	echo done.
+fi
+
+for file in configure.in uulib/configure.in wrapper.sh ; do
+	if [ -r $file ] ; then
+		echo -n "patching $file ... "
+		sed -e "s/^VERSION=.*/VERSION=$MAJOR.$MINOR/" \
+		    -e "s/^PATCH=.*/PATCH=$PATCH/" < $file > $file.temp
+		mv $file.temp $file
+		echo done.
+	fi
+done
+
+echo -n "running autoconf ... "
+autoheader && autoconf
+(cd uulib ; autoheader && autoconf )
+echo done.
+

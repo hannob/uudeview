@@ -1,0 +1,245 @@
+.\" $Id: uuenview.1,v 1.12 2002/03/06 13:57:36 fp Exp $ "
+.TH UUENVIEW 1 "June 2001"
+.SH NAME
+uuenview \- a powerful encoder for binary files
+.SH SYNOPSIS
+.B "uuenview [options] \fIfile(s)\fP"
+.br
+.SH DESCRIPTION
+.B uuenview
+encodes a binary file into ASCII text for sending over non-8-bit
+electronic data channels, such as electronic mail or the usenet.
+.B uuenview
+is a superset of and fully backwards compatible with the standard
+.BR uuencode (1)
+command, featuring more comfort and more flexibility.
+.PP
+Files encoded with
+.B uuenview
+are compatible with virtually all decoders, as long as the encoding
+method (see below) is supported by the remote side. If the remote
+side uses
+.BR uudeview (1),
+there shouldn't be any problems at all.
+.PP
+If properly configured,
+.B uuenview
+can directly send encoded files by email or to the usenet. These
+messages are wrapped into a proper MIME envelope, which is handy if
+the recipient uses MIME-compliant mail or news software.
+.SH OPTIONS
+.SS ENCODING SELECTION
+.TP
+.B -b
+Chooses the
+.I Base64
+encoding method as specified by the
+.I MIME
+standard.
+.TP
+.B -u
+Chooses the
+.I uuencoding
+method, for compatibility with
+.BR uuencode (1).
+.TP
+.B -y
+Chooses the
+.I yEncoding
+method.
+.TP
+.B -x
+Chooses the now obsolete
+.I xxencoding
+method.
+.TP
+.B -t
+Sends the file(s) as plain text.
+.TP
+.B -q
+Encodes the file(s) using quoted printable encoding.
+.PP
+These options are positional and affect the encoding of all remaining
+files on the command line until changed.
+.PP
+When sending, posting or attaching files, the default is to use
+Base64, resulting in MIME compliant messages. Otherwise, when encoding
+to standard output or into a file, the default is to use uuencoding.
+.SS TARGETS
+.TP
+.B -o
+Specifies that output shall be written into files. These files will
+have the same base name as the source file and an extension of
+.B .001, .002
+etc, depending on the number of parts required by the
+.B \-lines
+option. The encoded files are written to the current directory.
+.TP
+.BI -od " path"
+Same as '-o', but the encoded files are written to the given
+directory instead.
+.TP
+.BI -m " email"
+Mails the encoded file(s), each one probably split into multiple parts,
+to the given email address. Multiple recipients can be given as a 
+quoted, comma-separated list. On Unix systems, mail is usually piped
+to
+.BR sendmail (8).
+.TP
+.BI -p " newsgroup"
+Posts the encoded file(s), each one probably split into multiple parts,
+to the given newsgroup. Multiple newsgroups can be given as a quoted,
+comma-separated list. The
+.BR inews (1)
+program is invoked for posting. You may have to set the
+.I NNTPSERVER
+enviroment variable to your news server.
+.TP
+.B -a
+Attaches files. This feature is expected to be used from shell scripts
+and the like. In attach mode, a message is read from standard input,
+complete with headers. The files given on the command line are then
+"attached" to the message, which is converted, if necessary, to a
+proper MIME multipart format. The
+.B -a
+option can be combined with
+.B -m
+or
+.B -p
+in order to directly mail or post the result. Else, the message,
+complete with attachments, is written to standard output.
+.PP
+If no target option is given, the encoded data is printed to standard
+output.
+.SS HEADERS
+When mailing or posting a file, it is possible to set certain headers.
+Be careful to quote parameters that consist of more than one word.
+.TP
+.BI -s " subject"
+Set the
+.I Subject:
+header line. The file name and part number are automatically
+appended. Without this, a default subject header is generated.
+.TP
+.BI -f " from"
+Set the
+.I From:
+header line.
+.TP
+.BI -r " reply"
+Set the
+.I Reply-To:
+header line.
+.SS OTHER
+.TP
+.B -v
+Verbosely prints everything the program's trying to do.
+.TP
+.BI - lines
+Substituting
+.I lines
+with a number,
+sets the maximum number of encoded lines per part. The encoded data
+is automatically split into as many parts as required. Line counts
+less than 200 are ignored. The uuencoding and xxencoding methods
+encode 45k, and Base64 encodes 57k of data in 1000 lines. If this
+option is not specified, the default is unlimited lines per part,
+resulting in exactly one part.
+.TP
+.I file(s)
+One or more filenames to be processed. To encode a file from the
+standard input, use a single hyphen '\-' and give a filename to be
+used for the encoded file as the next parameter.
+.PP
+Options may also be set in the $UUENVIEW environment variable, which
+is read before processing the options on the command line.
+.SH NOTES
+.PP
+Files read from standard input can only be used once, meaning that
+at most one target option may be given.
+.PP
+Output written to standard output cannot be split into multiple parts.
+In this case, the
+.BI - lines
+option is ignored.
+.PP
+.B uuenview
+must be correctly configured at compile time in order for mailing and
+posting to work. If it doesn't, consult your system administrator.
+The program used for posting a file can be set at runtime using the
+.I INEWS
+environment variable. This setting overrides the compile-time configuration.
+.PP
+Base64 is not MIME. Base64 is the encoding specified by the MIME standard,
+but in order for a message to become a proper MIME message, a number of
+headers are required.
+.B uuenview
+produces these headers when mailing or posting, but not when writing to
+a file. In this case,
+.B uuenview
+does not have any control over the headers. If you include Base64
+output into your messages, they are
+.B not
+MIME-compliant!
+.PP
+If you rename, copy or link the program to
+.BR uuencode ,
+it may act as a smart replacement for the standard, accepting the same
+command-line syntax. This has not been well-tested yet.
+.SH EXAMPLES
+.TP
+.B uuenview -m 'root,fred@somewhere.com' uudeview.tgz
+Encodes the file
+.I uudeview.tgz
+and mails it to both your local system administrator and to your friend
+Fred at the Somewhere company.
+.PP
+If you give more than one filename on the command line, each file is
+usually handled separately. A workaround is to send them all as
+attachment to a single (or empty) mail:
+.TP
+.B uuenview -m root -b -a file1 file2 < /dev/null
+Creates an empty mail and attaches the two given files, encoded in
+Base64 format, and mails the result to your system administrator.
+.SH "SEE ALSO"
+.BR uudeview (1),
+.BR uuencode (1),
+.BR uudecode (1),
+.BR sendmail (8),
+.BR inews (1).
+.PD 0
+.PP
+The
+.B uudeview
+homepage on the Web, 
+.PD 0
+.PP
+http://www.fpx.de/fp/Software/UUDeview/
+.PD
+.SH BUGS
+.PP
+The program does not detect error conditions when mailing or posting.
+.PP
+Attaching only works reliably if certain headers of the input message
+(for example Content-Type) are not folded and shorter than 1024
+characters.
+.PP
+It is not possible to encode into BinHex.
+.PP
+The program will quite likely fail to handle binary data as input for
+plain text or quoted-printable attachments. On plain text attachments,
+the line length (must be less than 998 characters according to MIME)
+is not enforced.
+.PP
+It is not possible to set the "charset" value of plain text
+attachments.
+.PP
+It is not possible to set the content type value of attachments.
+.PP
+.BR sendmail (8)
+stops reading upon a line consisting only of a single dot.
+.I uudeview
+does not check plain text input files against this condition. (The
+problem is worked around when using quoted-printable, and does not
+exist with the other encodings.)
+

@@ -1,0 +1,17 @@
+Begin3
+Title:          uudeview
+Version:        0.5.20
+Entered-date:   03/01/04
+Description:    Smart multi-file multi-part decoder for uuencoded,
+		xxencoded, Base64 and BinHex encoded files. Also
+		includes a similarly powerful encoder.
+Keywords:       uudeview, uuenview, uudecode, decoding, MIME,
+		xxdecode, uuencode, Base64, BinHex
+Author:         fp@fpx.de (Frank Pilhofer)
+Maintained-by:  fp@fpx.de (Frank Pilhofer)
+Primary-site:   http://www.fpx.de/fp/Software/UUDeview/
+Original-site:  http://www.fpx.de/fp/Software/UUDeview/
+Platform:       Unix, Windows command line
+Copying-policy: GPL
+End
+

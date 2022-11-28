@@ -1,0 +1,21 @@
+
+This directory contains the documentation of the UUDeview Decoding
+Library programming interface. It is of interest only if you want
+to use the decoding/encoding functions from your own applications,
+and is not intended for users of the ready-made programs.
+
+The documentation is distributed in LaTeX format (requiring LaTeX
+version 2e). You can request Postscript and HTML formatted files
+from the author by email. Please understand that I cannot provide
+printed documentation.
+
+If you have LaTeX 2e installed, just run make to compile the text
+into a DVI file, which can be viewed with xdvi. Run 'make ps' to
+create a printable Postscript document.
+
+Even if you can't read the doc, you can take a look at the sample
+C files (they show the "evolution" of the "Trivial Decoder") to
+see how easy it is to include decoding support into your programs.
+
+                  Frank Pilhofer <fp@informatik.uni-frankfurt.de>
+

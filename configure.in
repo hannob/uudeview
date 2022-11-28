@@ -1,0 +1,649 @@
+dnl	This file is an input file used by the GNU "autoconf" program to
+dnl	generate the file "configure", which tries to guess your system
+dnl	configuration so that no manual editing of the Makefile should be
+dnl	necessary
+dnl
+dnl $Id: configure.in,v 1.34 2004/03/01 23:06:18 fp Exp $
+dnl
+
+AC_INIT(uudeview.lsm)
+AC_PREREQ(2.9)
+AC_CONFIG_HEADER(config.h)
+
+#
+# package revision
+#
+VERSION=0.5
+PATCH=20
+
+AC_ARG_ENABLE(tcl,     [  --enable-tcl=dir        looks for TCL files files below this directory],have_tcl=$enableval,have_tcl="yes")
+AC_ARG_ENABLE(tk,      [  --enable-tk=dir         looks for TK files below this directory],have_tk=$enableval,have_tk="yes")
+AC_ARG_ENABLE(minews,  [  --disable-minews        don't build the mini-inews],have_minews=$enableval,have_minews=yes)
+AC_ARG_ENABLE(posting, [  --enable-posting=server if using minews, sets the default name of your news
+                          server (will fall back to NNTPSERVER)],newsserver=$enableval,newsserver="")
+AC_ARG_ENABLE(domain,  [  --enable-domain=domain  if using minews, and autoconf cannot figure out
+                          your domain name, use this option to set it.
+                          Otherwise, a bogus domainname is used (causing
+                          the reply address of your postings to be invalid)],domainname=$enableval,domainname="")
+AC_ARG_ENABLE(sendmail,[  --enable-sendmail=prog  Use prog to mail a file with recipients on
+                          the command line and the mail via stdin],have_sendmail=$enableval,have_sendmail=yes)
+AC_ARG_ENABLE(inews,   [  --enable-inews=prog     Use prog to post a file. -h is given on
+                          the command line, the article is piped through
+                          standard input],have_inews=$enableval,have_inews=yes)
+AC_ARG_ENABLE(manuals, [  --disable-manuals       disables installation of the manual pages],have_manuals=$enableval,have_manuals=yes)
+
+#
+# proc to look for a file in a number of places
+#
+
+AC_DEFUN(FP_FIND_FILE, [
+    if test "x$4" = "x" ; then
+	ff_name=[`echo $1 | sed 's/[-.*/ ]/_/g'`]
+    else
+	ff_name="$4"
+    fi
+    eval $ff_name=
+    eval ${ff_name}_dir=
+    ff_file=
+    ff_file_dir=
+    for ff_dir in $2 ; do
+	if test -f $ff_dir/$1 ; then
+	    ff_file_dir=$ff_dir
+	    ff_file=$ff_dir/$1
+	    break
+	fi
+	for ff_subdir in $3 ; do
+	    if test -f $ff_dir/$ff_subdir/$1 ; then
+		ff_file_dir=$ff_dir/$ff_subdir
+		ff_file=$ff_dir/$ff_subdir/$1
+		break
+	    fi
+	done
+	if test "x$ff_file" != "x" ; then
+	    break
+	fi
+    done
+    eval ${ff_name}_dir="$ff_file_dir"
+    eval $ff_name="$ff_file"
+])
+
+#
+# Basic setup
+#
+
+AC_PROG_CC
+AC_PROG_CPP
+wi_PROTOTYPES
+AC_PROG_MAKE_SET
+dnl AC_PROG_INSTALL
+AC_PROG_RANLIB
+AC_PROG_LN_S
+
+if test "$wi_cv_prototypes" = no ; then
+	AC_WARN([Your compiler does not support function prototyping and])
+	AC_WARN([is not able to properly compile this package. What a pity.])
+        AC_WARN([Get gcc, or any compiler that supports function prototypes.])
+	exit 1
+fi
+
+#
+# ----------------------------------------------------------------------
+# Prepare for setup
+# ----------------------------------------------------------------------
+#
+
+orb_to_use=
+more_incs="`echo $with_includes | sed 's/:/ /g'`"
+more_libs="`echo $with_libs     | sed 's/:/ /g'`"
+base_incs="`echo $CPLUS_INCLUDE_PATH | sed 's/:/ /g'` /local/include /usr/local/include /usr/include"
+base_libs="`echo $LIBPATH $LIBRARY_PATH $LD_LIBRARY_PATH $SHLIB_PATH | sed 's/:/ /g'` /local/lib /usr/local/lib /usr/lib"
+base_bins="`echo $PATH | sed 's/:/\/.. /g'` /local/bin /usr/local/bin /usr/bin"
+base_dirs="$prefix `echo $PATH | sed 's/:/\/.. /g'`"
+
+#
+# ----------------------------------------------------------------------
+# Check Tcl setup
+# ----------------------------------------------------------------------
+#
+
+if test "x$have_tcl" != "xno" ; then
+	AC_MSG_CHECKING(for tclConfig.sh)
+	FP_FIND_FILE(tclConfig.sh,$have_tcl $have_tk $more_libs $base_libs $base_dirs,lib)
+	if test "x$tclConfig_sh" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tcl parts disabled)
+		AC_MSG_WARN(use --enable-tcl to locate tclConfig.sh)
+		have_tcl=no
+	else
+		AC_MSG_RESULT($tclConfig_sh)
+	fi
+fi
+
+if test "x$have_tcl" != "xno" ; then
+	AC_MSG_CHECKING(contents of tcl config)
+	. $tclConfig_sh
+	AC_MSG_RESULT(done)
+
+	AC_MSG_CHECKING(tcl version)
+	AC_MSG_RESULT(${TCL_VERSION}${TCL_PATCH_LEVEL})
+
+	if test "$TCL_MAJOR_VERSION" -lt 8 ; then
+		AC_MSG_WARN([Oops, I need at least Tcl 8.0, sorry. Tcl parts disabled.])
+		AC_MSG_WARN(use --enable-tcl to locate tclConfig.sh)
+		have_tcl=no
+	fi
+fi
+
+if test "x$have_tcl" != "xno" ; then
+	AC_MSG_CHECKING(for tcl.h)
+	FP_FIND_FILE(tcl.h,$TCL_PREFIX $TCL_EXEC_PREFIX $TCL_SRC_DIR $have_tcl $have_tk $more_incs $base_incs $base_dirs, include)
+	if test "x$tcl_h_dir" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tcl parts disabled)
+		AC_MSG_WARN(use --enable-tcl to locate tcl.h)
+		have_tcl=no
+	else
+		AC_MSG_RESULT(found in $tcl_h_dir)
+	fi
+fi
+
+if test "x$have_tcl" != "xno" ; then
+	tcllibfile=`eval echo $TCL_LIB_FILE`
+
+	tcllibpath=
+	for item in $TCL_LIB_SPEC $TCL_BUILD_LIB_SPEC ; do
+		case $item in
+		-L*)
+			tcllibpath="$tcllibpath `echo $item | sed 's/^-L//'`"
+			;;
+		esac
+	done
+
+	AC_MSG_CHECKING(for $tcllibfile)
+	FP_FIND_FILE($tcllibfile,$tcllibpath $TCL_PREFIX $TCL_EXEC_PREFIX $TCL_SRC_DIR $have_tcl $have_tk $more_libs $base_libs $base_dirs,lib unix,tcl_lib)
+	if test "x$tcl_lib_dir" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tcl parts disabled)
+		AC_MSG_WARN(use --enable-tcl to locate $tcllibfile)
+		have_tcl="no"
+	else
+		AC_MSG_RESULT(found in $tcl_lib_dir)
+	fi
+
+	case $TCL_DEFS in
+	*TCL_THREADS*)
+		CFLAGS="-D_REENTRANT $CFLAGS"
+		;;
+	esac
+fi
+
+#
+# Tcl setup complete
+#
+
+if test "x$have_tcl" != "xno" ; then
+	tcllibflag=`eval echo $TCL_LIB_FLAG`
+	TCL_CPPFLAGS="-I$tcl_h_dir $TCL_CPPFLAGS"
+	TCL_LDFLAGS="-L$tcl_lib_dir"
+	TCL_LIBS="$tcllibflag $TCL_LIBS"
+	AC_DEFINE(HAVE_TCL)
+	AC_DEFINE(TMAIN_THREE)
+fi
+
+AC_SUBST(TCL_CPPFLAGS)
+AC_SUBST(TCL_LDFLAGS)
+AC_SUBST(TCL_LIBS)
+
+#
+# ----------------------------------------------------------------------
+# Check Tk setup
+# ----------------------------------------------------------------------
+#
+
+if test "x$have_tcl" = "xno" ; then
+	have_tk=no
+fi
+
+if test "x$have_tk" != "xno" ; then
+	AC_MSG_CHECKING(for tkConfig.sh)
+	FP_FIND_FILE(tkConfig.sh,$have_tcl $have_tk $more_libs $base_libs $base_dirs,lib)
+	if test "x$tkConfig_sh" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tk parts disabled)
+		AC_MSG_WARN(use --enable-tk to locate tkConfig.sh)
+		have_tk=no
+	else
+		AC_MSG_RESULT($tkConfig_sh)
+	fi
+fi
+
+if test "x$have_tk" != "xno" ; then
+	AC_MSG_CHECKING(contents of tk config)
+	. $tkConfig_sh
+	AC_MSG_RESULT(done)
+
+	AC_MSG_CHECKING(tk version)
+	AC_MSG_RESULT(${TK_VERSION}${TK_PATCH_LEVEL})
+
+	if test "$TK_MAJOR_VERSION" -lt 8 ; then
+		AC_MSG_WARN([Oops, I need at least Tk 8.0, sorry. Tk parts disabled.])
+		AC_MSG_WARN(use --enable-tk to locate tkConfig.sh)
+		have_tk=no
+	fi
+fi
+
+if test "x$have_tk" != "xno" ; then
+	AC_MSG_CHECKING(for tk.h)
+	FP_FIND_FILE(tk.h,$TK_PREFIX $TK_EXEC_PREFIX $TK_SRC_DIR $have_tk $have_tcl $tcl_h_dir $more_incs $base_incs $base_dirs, include)
+	if test "x$tk_h_dir" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tk parts disabled)
+		AC_MSG_WARN(use --enable-tk to locate tk.h)
+		have_tk=no
+	else
+		AC_MSG_RESULT(found in $tk_h_dir)
+	fi
+fi
+
+if test "x$have_tk" != "xno" ; then
+	tklibfile=`eval echo $TK_LIB_FILE`
+	tcllibpath=
+	for item in $TK_LIB_SPEC $TK_BUILD_LIB_SPEC ; do
+		case $item in
+		-L*)
+			tklibpath="$tklibpath `echo $item | sed 's/^-L//'`"
+			;;
+		esac
+	done
+
+	AC_MSG_CHECKING(for $tklibfile)
+	FP_FIND_FILE($tklibfile,$tklibpath $TK_PREFIX $TK_EXEC_PREFIX $TK_SRC_DIR $have_tcl $have_tk $more_libs $base_libs $base_dirs,lib unix,tk_lib)
+	if test "x$tk_lib_dir" = "x" ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_WARN(Tk parts disabled)
+		AC_MSG_WARN(use --enable-tk to locate $tklibfile)
+		have_tk="no"
+	else
+		AC_MSG_RESULT(found in $tk_lib_dir)
+	fi
+fi
+
+#
+# Tk setup complete
+#
+
+if test "x$have_tk" != "xno" ; then
+	tklibflag=`eval echo $TK_LIB_FLAG`
+	TCL_CPPFLAGS="-I$tk_h_dir $TK_XINCLUDES $TCL_CPPFLAGS"
+	TCL_LDFLAGS="-L$tk_lib_dir $TCL_LDFLAGS"
+	TCL_LIBS="$tklibflag $TCL_LIBS"
+	AC_DEFINE(HAVE_TK)
+fi
+
+#
+# we might need various libraries if we decide to go for TCL/TK
+#
+
+AC_CHECK_FUNC(sin,, LIBS="$LIBS -lm")
+
+#
+# these libs are needed for both TK and minews (from tk's configure.in)
+# and in some cases -lsocket features gettimeofday, needed for TCL
+#
+
+tk_checkBoth=0
+AC_CHECK_FUNC(connect, tk_checkSocket=0, tk_checkSocket=1)
+if test "$tk_checkSocket" = 1; then
+    AC_CHECK_LIB(socket, connect, LIBS="$LIBS -lsocket", tk_checkBoth=1)
+fi
+if test "$tk_checkBoth" = 1; then
+    tk_oldLibs=$LIBS
+    LIBS="$LIBS -lsocket -lnsl"
+    AC_CHECK_FUNC(accept, tk_checkNsl=0, [LIBS=$tk_oldLibs])
+fi
+AC_CHECK_FUNC(gethostbyname, , AC_CHECK_LIB(nsl, gethostbyname, [LIBS="$LIBS -lnsl"]))
+
+#
+# Look for a mailing program to be used by uuenview
+#
+
+case "x$have_sendmail" in
+xno*)
+	MAILER=""
+	;;
+x|xyes*)
+	AC_PATH_PROG(MAILER,sendmail,,$PATH:/sbin:/usr/lib:/usr/sbin:/usr/etc)
+	if test "x$MAILER" = "x" ; then
+	AC_PATH_PROG(MAILER,mailx,,$PATH:/sbin:/usr/lib:/usr/sbin:/usr/etc)
+	if test "x$MAILER" != "x" ; then
+		AC_DEFINE(MAILER_NEEDS_SUBJECT)	# mailx wants -s "subject"
+	else
+	AC_PATH_PROG(MAILER,elm,,$PATH)
+	if test "x$MAILER" != "x" ; then
+		AC_DEFINE(MAILER_NEEDS_SUBJECT)	# elm wants -s "subject"
+	else
+	AC_PATH_PROG(MAILER,mail,,$PATH:/sbin:/usr/lib:/usr/sbin:/usr/etc)
+	if test "x$MAILER" = "x" ; then
+		AC_WARN([I haven't found a suitable mail program. You will not be])
+		AC_WARN([able to mail files directly from uuenview.])
+	fi
+	fi
+	fi
+	fi
+	;;
+*)
+	AC_MSG_CHECKING([for suitable mailer])
+	AC_MSG_RESULT($have_sendmail)
+	if test ! -x $have_sendmail ; then
+		AC_WARN([Cannot execute $have_sendmail])
+		AC_WARN([Make sure this prog exists when running uuenview])
+	fi
+	MAILER="$have_sendmail"
+	;;
+esac
+
+if test "x$MAILER" != "x" ; then
+	AC_DEFINE_UNQUOTED(PROG_MAILER,"$MAILER")
+fi
+
+#
+# Look for inews. If it is there, there's no need to make our own
+#
+
+case "x$have_inews" in
+xno*)
+	INEWS=""
+	have_minews=no
+	newsserver="not_configured"
+	domainname="not_configured"
+	;;
+x|xyes*)
+	AC_PATH_PROG(INEWS,inews,,$PATH:/usr/bin:/usr/news:/usr/news/bin:/usr/local/bin:/usr/local/news:/usr/local/news/bin:/usr/share/news:/usr/share/news/bin)
+
+	if test "x$INEWS" != "x" ; then
+		AC_DEFINE(HAVE_NEWS)
+		AC_DEFINE_UNQUOTED(PROG_INEWS,"$INEWS -h")
+		have_minews=no
+		newsserver="not_needed"
+		domainname="not_needed"
+	else
+	if test "$have_minews" = "yes" ; then
+		AC_DEFINE(HAVE_NEWS)
+
+		#
+		# we must cheat here to find the final location of minews. 
+		# ./configure defines the final values too late. This mimics
+		# what autoconf 2.7 does.
+		#
+
+		eval "our_prefix=$prefix"
+		eval "our_exec_prefix=$exec_prefix"
+		eval "our_bindir=$bindir"
+
+		if test "x$our_prefix" = "xNONE" ; then
+			eval "our_prefix=$ac_default_prefix"
+		fi
+		if test "x$our_exec_prefix" = "xNONE" ; then
+			eval "our_exec_prefix=$our_prefix"
+		fi
+		if test "x$our_bindir" = "xNONE/bin" ; then
+			eval "our_bindir=$our_exec_prefix/bin"
+		fi
+
+		AC_DEFINE_UNQUOTED(PROG_INEWS,"${our_bindir}/minews -h")
+	else
+		AC_WARN([Couldn't find inews and you didn't want minews.])
+		AC_WARN([You won't be able to post files directly from uuenview])
+		have_minews=no
+		newsserver="not_configured"
+		domainname="not_configured"
+	fi
+	fi
+	;;
+*)
+	AC_MSG_CHECKING([for suitable inews])
+	AC_MSG_RESULT([$have_inews])
+	if test ! -x $have_inews ; then
+		AC_WARN([Cannot execute $have_inews])
+		AC_WARN([Make sure this prog exists when running uuenvew])
+	fi
+	AC_DEFINE(HAVE_NEWS)
+	AC_DEFINE_UNQUOTED(PROG_INEWS,"$have_inews -h")
+	have_minews=no
+	newsserver="not_needed"
+	domainname="not_needed"
+	;;
+esac
+
+#
+# check for NNTPSERVER or NNTP_SERVER
+#
+
+if test "$have_minews" = "yes" ; then
+AC_MSG_CHECKING([for news server])
+if test "x$newsserver" = "x" ; then
+if test "x$NNTPSERVER" != "x" ; then
+	newsserver=$NNTPSERVER
+else
+if test "x$NNTP_SRVER" != "x" ; then
+	newsserver=$NNTP_SERVER
+fi
+fi
+fi
+if test "x$newsserver" = "x" ; then
+	AC_MSG_RESULT([not found])
+	AC_DEFINE(NEED_NNTPSERVER)
+else
+	AC_MSG_RESULT($newsserver)
+	AC_DEFINE_UNQUOTED(NNTPSERVER,"$newsserver")
+fi
+fi
+
+#
+# If we compile and use minews, we want to know our domain name
+#
+
+if test "$have_minews" = "yes" ; then
+AC_PATH_PROG(HOSTNAME,hostname,,$PATH:/sbin:/usr/sbin)
+AC_MSG_CHECKING([domain name])
+
+#
+# try /etc/resolv.conf
+#
+
+if test "x$domainname" = "x" ; then
+if test -f /etc/resolv.conf ; then
+	#
+	# note: Parameter for tr is <space><tab>
+	#
+	domainname=`grep '^domain' /etc/resolv.conf | tr -d ' 	' | sed 's/domain//'`
+fi
+fi
+
+#
+# on some systems, hostname returns the FQN
+#
+
+if test "x$domainname" = "x" ; then
+if test "x$HOSTNAME" != "x" ; then
+	if test "x`$HOSTNAME | grep "\\."`" != "x" ; then
+		domainname=`$HOSTNAME | sed 's/[[a-zA-Z0-9]]*\.//'`
+	fi
+fi
+fi
+
+if test "x$domainname" = "x" ; then
+	AC_MSG_RESULT([unknown])
+	AC_WARN([Couldn't figure out your domain name. Configuring bogus])
+	AC_WARN([domain. If you intend to post directly from uuenview,])
+	AC_WARN([rerun configure and use --enable-domain=your-domainname])
+	AC_WARN([with your real domain name.])
+	domainname="i.dont.know.where.i.am"
+else
+	AC_MSG_RESULT($domainname)
+fi
+
+AC_DEFINE_UNQUOTED(DOMAINNAME,"$domainname")
+
+fi
+
+#
+# Check the directory separator. Because this is probably a Unix-like
+# system, just set it statically to "/". On other systems, change it
+# in config.h
+#
+
+AC_MSG_CHECKING([directory separator])
+dirseparator="/"
+AC_MSG_RESULT($dirseparator)
+AC_DEFINE_UNQUOTED(DIRSEPARATOR,"$dirseparator")
+
+#
+# Checks for header files and library functions
+#
+
+AC_TYPE_SIZE_T
+AC_HEADER_STDC
+AC_HEADER_TIME
+AC_CHECK_HEADERS(fcntl.h unistd.h memory.h malloc.h errno.h direct.h)
+AC_CHECK_HEADERS(io.h sys/time.h)
+AC_CHECK_FUNCS(getcwd popen gettimeofday isatty)
+
+AC_CHECK_FUNC(tempnam,,AC_DEFINE(tempnam,_FP_tempnam))
+
+#
+# strerror might be internally defined. this would cause a
+# CHECK_FUNCS(strerror) to fail because it'd be called with
+# zero arguments. So use our own code.
+#
+AC_MSG_CHECKING([for strerror])
+AC_TRY_LINK([
+char *blubb() { return (char *) strerror (42); }
+],[
+(void) blubb();
+],have_strerror=yes,AC_DEFINE(strerror,_FP_strerror)
+have_strerror=no)
+AC_MSG_RESULT($have_strerror)
+
+AC_MSG_CHECKING([for stdin])
+AC_TRY_LINK([
+#include <stdio.h>
+char *blubb() { FILE *in, *out; in=stdin; out=stdout; return (char*)0; }
+],[
+(void) blubb();
+],have_stdio=yes,AC_DEFINE(HAVE_STDIO)
+have_stdio=no)
+AC_MSG_RESULT($have_stdio)
+
+if test "$ac_cv_header_stdc" = "no" ; then
+	AC_CHECK_HEADERS(stdarg.h varargs.h)
+	if test "$ac_cv_header_stdarg_h" = "no" ; then
+	if test "$ac_cv_header_varargs_h" = "no" ; then
+		AC_MSG_ERROR([neither stdarg.h nor varargs.h present])
+	fi
+	fi
+fi
+
+if test "$have_minews" = "yes" ; then
+	AC_CHECK_HEADERS(pwd.h)
+fi
+
+#
+# Check whether this is a DOS-Based system. Another bogus test.
+# Don't even bother to print a message. This code is needed so
+# that autoheader includes the #undef into the final config.h
+# and we can change the definition by hand on a really DOS
+# system (where ./configure doesn't work anyway ...)
+#
+
+if false ; then
+	AC_DEFINE(SYSTEM_DOS)
+	AC_DEFINE(SYSTEM_QUICKWIN)
+	AC_DEFINE(SYSTEM_WINDLL)
+	AC_DEFINE(SYSTEM_OS2)
+fi
+
+if test "x$have_tcl" != "xno" ; then
+	#
+	# Hack: remove doubly-defined libs
+	#
+
+	TCL_NEW_LIBS=""
+	for lib in $TCL_LIBS $LIBS ; do
+		found=no
+		for tlib in $TCL_NEW_LIBS ; do
+			if test "x$lib" = "x$tlib" ; then
+				found=yes
+				break
+			fi
+		done
+		if test "x$found" = "xno" ; then
+			TK_NEW_LIBS="$TK_NEW_LIBS $lib"
+		fi
+	done
+fi
+
+#
+# On some systems (so far, OS2 and WINDOWS), functions that are exported
+# from a DLL must be declared specifically.
+#
+
+AC_DEFINE_UNQUOTED(UUEXPORT,)
+AC_DEFINE_UNQUOTED(UUTCLEXPORT,)
+AC_DEFINE_UNQUOTED(TOOLEXPORT,)
+AC_DEFINE_UNQUOTED(UUTCLFUNC,)
+
+#
+# decide which programs and libraries to build
+#
+
+PROGS="uudeview"
+DOINST="install-uudeview"
+MPAGES="uudeview.1 uuenview.1"
+
+if test "x$have_minews" = "xyes" ; then
+	PROGS="$PROGS minews"
+	DOINST="$DOINST install-minews"
+fi
+if test "x$have_tk" != "xno" ; then
+	PROGS="$PROGS xdeview"
+	MPAGES="$MPAGES xdeview.1"
+	DOINST="$DOINST install-tcl"
+fi
+
+if test "x$have_manuals" = "xno" ; then
+	MPAGES=""
+fi
+
+AC_SUBST(DOINST)
+AC_SUBST(PROGS)
+AC_SUBST(MPAGES)
+
+#
+# set version number
+#
+AC_MSG_CHECKING([version number])
+version_number="$VERSION"pl"$PATCH"
+AC_MSG_RESULT($version_number)
+AC_SUBST(VERSION)
+AC_SUBST(PATCH)
+
+#
+# done
+#
+
+AC_OUTPUT(Makefile tcl/Makefile unix/Makefile uulib/Makefile)
+
+#
+# copy config.h into our subdirectories
+#
+#echo copying tcl/config.h
+#cp config.h tcl
+#echo copying unix/config.h
+#cp config.h unix
+#echo copying uulib/config.h
+#cp config.h uulib
+#
+#
+# goodbye
+#

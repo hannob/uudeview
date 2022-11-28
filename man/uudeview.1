@@ -1,0 +1,409 @@
+.\" $Id: uudeview.1,v 1.14 2003/04/12 23:18:29 fp Exp $ "
+.TH UUDEVIEW 1 "June 2001"
+.SH NAME
+UUDeview \- a powerful decoder for binary files
+.SH SYNOPSIS
+.B "uudeview [options] [@\fIfile\fP] \fIfile(s)\fP"
+.SH DESCRIPTION
+.I UUDeview
+is a smart decoder for attachments that you have received in encoded
+form via electronic mail or from the usenet. It is similar to the
+standard 
+.BR uudecode (1)
+command, yet with more comfort and flexibility.
+.I UUDeview
+supports the
+.I uuencoding, xxencoding, Base64, yEncoding
+and
+.I BinHex
+encoding methods, and is able to handle split-files (which have been sent
+in multiple parts) as well as multiple files at once, thus greatly simplifying
+the decoding process. Usually, you will not have to manually edit files to
+prepare them for decoding.
+.PP
+After invoking
+.B uudeview,
+it will scan all given files for encoded data, sort them and their parts
+and then present you with the list of files that seem like they can be
+decoded properly. You can then pick files individually for decoding.
+.SH OPTIONS
+.SS BEHAVIOR
+.TP
+.B -i
+Disables interactivity. After scanning the files and sorting
+everything out, the program will not promt you for whether a file
+shall be decoded or not, but batch-decodes all available files.
+This is the default when reading from standard input.
+.TP
+.B -a
+Autorename option. If a target file already exists, and this option is
+given, a dot and a unique sequence number is appended to the file name.
+I.e., foo.gif becomes foo.gif.1 if decoded a second time.
+.TP
+.B +a
+An alternative incarnation of autorename. If a target file already
+exists, an underscore and a unique sequence number is inserted into
+the filename before the first dot, i.e., foo.gif becomes foo_1.gif.
+.TP
+.B -o
+Gives the OK to overwrite existing files when decoding. In interactive
+mode, the default is to prompt the user whether to overwrite, rename
+or skip the file. This
+option takes precedence over
+.B -a.
+In non-interactive mode (using
+.B -f
+), the default is to overwrite files without asking.
+.TP
+.B +o
+Says it's not OK to overwrite files. This is useful in non-interactive
+mode, so that existing files are untouched. This has lesser precedence
+than -a.
+.TP
+.B -c
+Autoclear. Remove all input files that were successfully decoded. Use
+with care! UUDeview only checks if any data was decoded from an input
+file, but does not care about any other contents of that input file,
+or whether a file also held an incomplete attachment.
+.TP
+.BI -p " path"
+Sets the path where decoded files shall be written to. This must be a valid
+pathname, or you'll get errors when trying to decode anything. Defaults to
+the current working directory.
+.TP
+.B -m
+Ignore file mode. Uuencoded and xxencoded files have the original file
+permissions stored on the begin line. Unless this option is given,
+.I UUDeview
+will restore them without checking if they are sensible. With this
+option, the permissions are reset to a default of 0666.
+.SS TWEAKING
+.TP
+.B -z
+Enforces stricter MIME adherance. Normally, the program tries to find
+encoded data even in "text/plain" plaintext parts of MIME
+messages. With this option given,
+.I UUDeview
+will limit this capability, and will not accept apparently incomplete
+encoded messages (for example, seemingly uuencoded data without begin
+or end lines).
+You can tighten this option even more by using it twice, or by using
+.B -z2.
+Then,
+.I UUDeview
+will not check plaintext sections of MIME messages for encoded data at
+all and behave fully MIME-compliant.
+Neither option affects the behavior on non-MIME input files. This
+option needs a better name, but I'm slowly running out of option
+letters.
+.TP
+.B -f
+Uses fast mode for file scanning. The program assumes that each input file
+holds at most one part, which is usually true for files in a news spool
+directory. This option
+.B breaks decoding
+of input files with multiple articles. Also, certain sanity checks are
+disabled, probably causing erroneous files to be presented for decoding.
+Sometimes you'll get error messages when decoding, sometimes you'll
+just receive invalid files. Don't use
+.B -f
+if you can't live with these problems.
+.TP
+.B -r
+Ignore reply messages, i.e. all messages whose subject starts with
+Re:
+.TP
+.B -t
+Use plaintext messages. Usually, UUDeview only presents encoded data
+for decoding. Plaintext messages are only shown if they have an
+associated file name. With this option set, unnamed text parts from
+.I MIME
+messages and non-encoded messages are also offered. Unnamed messages
+are assigned a unique name in the form of a sequential four-digit number.
+.TP
+.B -d
+Sets the program into desperate mode. It will then offer you to decode
+incomplete files. This is useful if you are missing the last part of a
+50-parts posting, but in most cases the desperately-decoded files will
+simply be corrupt and unusable. The degree of usefulness of an incomplete
+file depends on the file type.
+.TP
+.B -b
+This changes
+.I UUDeview's
+"bracket policy."
+.I UUDeview
+looks at a message's subject line, and reads numbers in brackets as
+the part number, as in (3/7), which is read as the third message in a
+series of seven. By default, numbers in parentheses () are preferred
+over numbers in brackets []. You can change this using either
+.B -b
+or, for clarity
+.BI -b [].
+.TP
+.B -s
+Read "minus smartness". This option turns off automatic part number
+detection from the subject line. Try this option if
+.I UUDeview
+fails to parse the subject line correctly and makes errors at guessing
+part numbers, resulting in incorrect ordering of the parts. With this
+option, parts are always put together sequentially (so the parts must
+be correctly ordered in the input file). Also, with this option, the
+program cannot detect that parts are missing.
+.B Note:
+The correct part number found in proper
+.I MIME
+files is still evaluated.
+If this option is given twice, the subject itself is ignored, too, and
+won't be used to group parts. Use if the messages that the parts come
+delivered in have different subject lines.
+.SS OTHER OPTIONS
+.TP
+.B -q
+(Quiet) Disables
+verbosity. Normally, the program prints some status messages
+while reading the input files, which can be very helpful if something
+should go wrong. Use if these messages disturb you.
+.TP
+.B -n
+No progress bars. Normally, UUDeview prints ASCII bars crawling up
+to 100 percent, but does not check if your terminal is capable of
+displaying them. Use this switch if your terminal isn't, or if you
+find the bars annoying.
+.TP
+.BI +e " exts"
+Selects only the files with the given extensions for decoding, others will
+be ignored.
+.BI +e " .gif.jpg"
+would decode all gif and jpeg files, but not tif or other files. The
+list of extensions works case-insensitive.
+.TP
+.BI -e " exts"
+The reverse of the above.
+.PP
+You will experience unwanted results if you try to mix \+e and \-e options
+on the command line.
+.SS INPUT OPTIONS
+.TP
+.I file(s)
+The files to be scanned for encoded files. You can also give a single hyphen
+\'\-\' to read from standard input. Any number of files may be given, but
+there is usually a limitation of 128 options imposed by the shell. If you are
+composing the list of files with wildcards, make sure you don't accidentally
+feed the program with binary files. This will result in undefined behaviour.
+.TP
+.BI @ file
+Makes
+.I UUDeview
+read further options from the file. Each line of the file must hold exactly
+one option. The file 
+.B is erased 
+after the program finishes. This feature may be used to specify an unlimited
+number of files to be scanned. Combined with the powers of
+.BR find (1),
+entire directory trees (like the news spool directory) can be processed.
+.PP
+Options may also be set in the $UUDEVIEW environment variable, which is
+read before processing the options on the command line.
+.SH DECODING
+After all input files have been scanned, you are asked for each file what
+do do with it. Of course, the usual answer is to decode it, but there are
+other possibilities. You can use the following commands (each command is
+a single letter):
+.TP
+.B d
+(D)ecode the file and write the decoded file to disk, with the given name.
+.TP
+.B y
+(Y)es does the same as (d).
+.TP
+.B x
+E(x)tract also decodes the file.
+.TP
+.B a
+Decodes all remaining files without prompting.
+.TP
+.B n
+Skips this file without decoding it.
+.TP
+.B b
+Steps back to the previous file.
+.TP
+.B r
+Rename. You can choose a different name for the file in order to save it
+under this new name.
+.TP
+.B p
+Set the path where decoded files shall be written to. This path can also
+be set with the -p command line option.
+.TP
+.B i
+Displays info about the file, if present. If a multipart posting had a
+zeroeth part, it is printed, otherwise the first part up to the encoded
+data is printed.
+.TP
+.B e
+Execute a command. You can enter any arbitrary command, possibly using the
+current file as an argument. All dollar signs '$' in this command line are
+replaced with the filename of the current file (speaking correctly, the name
+of a temporary file). You should not background processes using this
+temporary file, as programs might get confused if their input file suddenly
+disappears.
+.TP
+.B l
+List a file. Use this command only if you know that the file in question is
+a textfile, otherwise, you'll get a load of junk.
+.TP
+.B q
+Quits the program immediately.
+.TP
+.B ?
+Prints a short description of all these commands.
+.PP
+If you don't enter a command and simply hit return at the prompt, the
+default command, decoding the file, is used.
+.SH RUNTIME MESSGAGES
+In verbose mode (that is, if you didn't disable verbosity with the
+-v option), progress messages will appear.
+They are extremely helpful in tracing what the program does, and can
+be used to figure out the reason why files cannot be decoded, if you
+understand them. This section explains how to interpret them.
+Understanding this section is not essential to operate the program.
+.PP
+First, there are "Loading" messages, which begin with the string
+"Loaded". Each line should feature the following items:
+.TP
+.B Source File
+The first item is the source file from which a part was loaded. Many
+parts can be detected within a single file.
+.TP
+.B Subject Line
+The complete subject is reproduced in single quotes.
+.TP
+.B Identifier
+The program derives a unique identification for this thread from the
+subject line, for grouping articles that look like they belong to the
+same file. The result of this algorithm is presented in braces.
+.TP
+.B Filename
+If a filename was detected on the subject line or within the data (for
+example, on a begin line, or as part of the Content-Type information).
+.TP
+.B Part Number
+The part number derived from the subject line, or, in the case of
+properly MIME-formatted messages, from the "part" information.
+.TP
+.B Begin/End
+If a "begin" or "end" token was detected, it is printed here.
+.TP
+.B Encoding Type
+If encoded data was detected within this part, either "UUdata",
+"Base64", "XXdata" or "Binhex" is printed here.
+.PP
+More messages are printed after scanning has completed. A single line
+will be printed for each group of articles. The contents of this line
+are best understood by looking at an example. Here is one:
+.PP
+.B Found 'mailfile.gz' State 16 UUData Parts begin 1 2 3 4 5 end 6 OK
+.PP
+This indicates that the file
+.I mailfile.gz
+has been found. The file was uuencoded ("UUData") and consists of
+6 parts. The "begin" token was found in the first part, and the
+"end" token was found in the sixth part. Because it looks like
+everything's there, this file is tagged as being "OK". The
+.I State
+is a set of bits, where the following values may be or'ed:
+.TP
+.B 1
+Missing Part
+.TP
+.B 2
+No Begin
+.TP
+.B 4
+No End
+.TP
+.B 8
+No encoded data found.
+.TP
+.B 16
+File looks Ok
+.TP
+.B 32
+An error occured during decoding of the file.
+.TP
+.B 64
+File was successfully decoded.
+.SH NOTES
+Because the program cannot receive terminal input when a file is being
+read from standard input, interactivity is automatically disabled in
+this case.
+.PP
+UUDeview is aware of MIME messages, but normally ignores strict MIME
+compliance in favor of finding unproperly encoded data within them,
+e.g. to succeed when individual parts of a uuencoded file have been
+sent with a MIME mailer as MIME messages. For that, it subjects all
+"text/plain" parts of a message to encoding detection. You can use the
+.B -z
+option (see above) for more strict RFC2045 compliance.
+.PP
+The scanner tends to ignore short Base64 data (less than four lines)
+outside of MIME messages. Some checks for this condition are used in
+desperate mode, but they may cause misdetection of encoded data,
+resulting in some invalid files.
+.PP
+Files are always decoded into a temporary file first, then this file is copied
+to the final location. This is to prevent accidentally overwriting existing
+files with data that turns out too late to be undecodeable. Thus be careful
+to have twice the necessary space available. Also, when reading from
+standard input, all the data is dumped to a temporary file before
+starting the usual scanning process on that file.
+.PP
+.B uudeview
+tries to derive all necessary information from the Subject: line if present.
+If it holds garbage, or if the program fails to find a unique identification
+and the part number there, 
+.B uudeview
+might still be able to decode the file using other heuristics, but you'll
+need major luck then.
+.PD 0
+.PP
+Yet this is only a concern with split-files. If all encoded files only consist
+of single parts, don't worry.
+.PD
+.PP
+If you rename, copy or link the program to
+.BR uudecode ,
+it may act as a smart replacement for the standard, accepting the same
+command-line options. This has not been well-tested yet.
+.SH "SEE ALSO"
+.BR uuenview (1),
+.BR uudecode (1),
+.BR uuencode (1).
+.PD 0
+.PP
+The
+.I UUDeview
+homepage on the Web, 
+.PD 0
+.PP
+http://www.fpx.de/fp/Software/UUDeview/
+.PD
+.SH BUGS
+To read a file whose name starts with a hyphen '-', prepend a path
+name, for example './'.
+.PP
+The checksums found in
+.I BinHex
+data are ignored.
+.PP
+The program cannot fully handle partial multipart messages (MIME-style
+multipart messages split over several mail messages). The individual
+parts are recognized and concatenated, and the embedded multipart
+message is "decoded" into a plain-text file, which must then be fed
+again to
+.B uudeview.
+Don't worry, these kinds of messages are rare.
+.PP
+UUDeview cannot decipher RFC 1522 headers.

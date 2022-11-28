@@ -1,0 +1,535 @@
+.\" $Id: xdeview.1,v 1.6 2001/06/04 16:26:56 fp Exp $ "
+.TH XDEVIEW 1 "June 1996"
+.SH NAME
+xdeview \- a powerful decoder for binary files
+.SH SYNOPSIS
+.B "xdeview [Xt options] [-- options] [\fIfile(s)\fP]"
+.br
+.SH DESCRIPTION
+.I XDeview
+is a smart decoder for attachments that you have received in encoded
+form via electronic mail or from the usenet. It is similar to the
+standard 
+.BR uudecode (1)
+command, yet with more comfort and flexibility.
+.I XDeview
+supports the
+.I uuencoding, xxencoding, Base64
+and
+.I BinHex
+encoding methods, and is able to handle split-files (which have been sent
+in multiple parts) as well as multiple files at once, thus greatly simplifying
+the decoding process. Usually, you will not have to manually edit files to
+prepare them for decoding.
+.PP
+If you don't really need a graphical frontend for these kinds of jobs,
+have a look at
+.BR uudeview (1)
+and
+.BR uuenview (1).
+.PP
+After invoking the program, it will scan all the given files for encoded
+data. If any of them were directories, they will be recursively dived into.
+You don't need to give files on the command line; you can also select
+files later from within the program. After completing the initial scan,
+you will be presented with a list of files that seem like they can be
+decoded properly. You can then pick files individually for decoding.
+.SH OPTIONS
+There's no real need to set options on the command line; they can also
+be set from within the program. Note that options must be preceded by
+a double-hyphen '--', otherwise they might be mistaken for display
+options.
+.TP
+.B -d
+Sets the program into desperate mode. It will then offer you to decode
+incomplete files. This is useful if you are missing the last part of a
+50-parts posting, but in most cases the desperately-decoded files will
+simply be corrupt and unusable. The degree of usefulness of an incomplete
+file depends on the file type.
+.TP
+.B -f
+Uses fast mode for file scanning. The program assumes that each input file
+holds at most one part, which is usually true for files in a news spool
+directory. This option
+.B breaks decoding
+of input files with multiple articles. Also, certain sanity checks are
+disabled, probably causing erroneous files to be presented for decoding.
+Sometimes you'll get error messages when decoding, sometimes you'll
+just receive invalid files. Don't use
+.B -f
+if you can't live with these problems.
+.TP
+.B -o
+Gives the OK to overwrite files already there on decoding. The default is
+to prompt the user whether to overwrite, rename or skip the file.
+.TP
+.B -v
+Disables verbosity. Normally, the program prints some status messages
+while reading the input files, which can be very helpful if something
+should go wrong. Use if these messages disturb you.
+.TP
+.B -p path
+Sets the path where decoded files shall be written to. This must be a valid
+pathname, or you'll get errors when trying to decode anything. Defaults to
+the current working directory.
+.TP
+.B -b
+This changes
+.I xdeview's
+policy of finding a part number on a subject line and may only be needed
+in some rare cases when part numbers are found in () parentheses as well
+as in [] brackets, for example in a series of multi-part postings.
+By default,
+.I xdeview
+uses the numbers found in () parentheses first. But if this number
+indicates the file's number in the series and the part number is
+given in [] brackets, use this parameters to make the program read
+the other number first. This does not affect decoding of files with
+only one or neither type of brackets.
+If you prefer, you can also use the option as
+.B -b[]
+.TP
+.B -s
+Read "minus smartness". This option turns off automatic part number
+detection from the subject line. Try this option if
+.I xdeview
+fails to parse the subject line correctly and makes errors at guessing
+part numbers, resulting in incorrect ordering of the parts. With this
+option, parts are always put together sequentially (so the parts must
+be correctly ordered in the input file).
+.B Note:
+The correct part number found in proper
+.I MIME
+files is still evaluated.
+.TP
+.B -t
+Use plaintext messages. Usually, XDeview only presents encoded data
+for decoding. With this option set, text parts from
+.I MIME
+messages and non-encoded messages are also offered. Plaintext messages
+frequently don't have an associated filename, so they're assigned a
+unique name from a sequential four-digit number.
+.SH MAIN MENU
+The main window of
+.I xdeview
+is composed of six main elements. At the top is the 
+.I Menu Bar.
+Centered is the
+.I File List,
+which lists all the files that have been detected in the encoded data
+and are ready for decoding. Left of the File List is the
+.I Status List,
+which describes the status of each file. Usually, this list will show
+"OK" for all files, as display of erroneous files is normally suppressed.
+On the right is a bunch of short-cut buttons with the most heavily-used
+functions. At the bottom of the window is the 
+.I Save Path
+entry field, and the status bar. Each of these items will be described
+individually in the following text.
+.SH MENU BAR
+.TP
+.B File Menu
+.RS
+.TP
+.B Load ...
+Loads encoded files. These files are then scanned for encoded data and
+files; these files are added to the File List. You can also select
+directories, which are then recursively descended into
+.TP
+.B Encode
+Encode file(s), storing the encoded data on disk, sending them via
+email, or posting them to newsgroups. See below.
+.TP
+.B Helpers
+Xdeview reads information from your .mailcap and .mime.types to perform
+the appropriate default action when you hit the "Execute" button. In
+this dialogue, you can configure the locations of these files.
+.TP
+.B Save Setup
+Saves all current options, the input and output file paths etc. into
+the .xdeviewrc file in your home directory. This file is automatically
+read upon startup, so the saved settings will be set by default in
+future sessions. The resource file is actually a Tcl script which you
+can edit with any editor.
+.TP
+.B Quit
+Exits the program.
+.RE
+.TP
+.B Options
+Set various options that modify the behaviour of the program. Note that
+most options only catch for files read afterwards.
+.RS
+.TP
+.B Fast Scanning
+Sets fast scanning mode. The program will then assume that all input
+files contain at most one encoded part (as it is true with files from
+a news spool). The scanning engine will be sped up because it does not
+have to read each input file completely but stops scanning after
+encoded data has been found.
+.PP
+The decoder has to disable some safety options in fast mode, so
+certain problems with the file will only be detected when finally
+decoding the file.
+.TP
+.B Automatic Overwrite
+When decoding a file which is already present in the target
+directory, the user will be asked whether the file shall be
+overwritten. By enabling this option, target files will be
+overwritten without asking.
+.TP
+.B Desperate Mode
+Usually, you will only be presented files to which all parts have
+been found. Enabling Desperate Mode, you'll also get to see the other
+files as well, with an appropriate description of the problem in the
+Status List.
+In desperate mode, the decoder will also try to detect short Base64 files
+outside of MIME messages. This is normally disabled, because these 
+desperate tries to find Base64 encoding may cause misdetection of
+encoded data, again resulting in invalid files.
+.TP
+.B Verbose Mode
+Opens a separate text box to which additional messages will be written
+while scanning the input files. These messages are extremely helpful
+for finding out what went wrong if files cannot be decoded properly.
+.TP
+.B Alternate Bracket Policy
+Changes the heuristics by which the decoder tries to extract a part
+number from the subject line. The algorithm usually gives numbers
+in braces () higher priority than numbers in brackets []. If both
+kinds of brackets are present, and their use is conflicting
+(for example if both the part number and a series number are given),
+then you may have to explicitely select the bracket policy. If this
+option is false (default), then the "part number" is taken from the
+braces (), otherwise from the brackets [].
+.TP
+.B Dumb Mode
+Disables automatic part number detection by parsing the subject line.
+Use if
+.I xdeview
+fails to pick up the correct part numbers. Note that with the option
+set, the parts must be correctly ordered in the input files. Also,
+missing parts will not be detected this way.
+.TP
+.B Handle Text Files
+Usually, XDeview only presents encoded data
+for decoding. With this option set, text parts from
+.I MIME
+messages and non-encoded messages are also offered. Plaintext messages
+frequently don't have an associated filename, so they're assigned a
+unique name from a sequential four-digit number.
+.TP
+.B Auto Info
+Opens up the information window whenever you click on a file in the
+File List.
+.TP
+.B Remove Input Files
+With this option set, input files are removed if any file was
+successfully decoded from them. Use with care! UUDeview only checks if
+any data was decoded from an input file, but does not care about any
+other contents of that input file, or whether a file also held an
+incomplete attachment.
+.TP
+.B MIME Compliance
+Be more strict when reading MIME input files.
+.RE
+.TP
+.B Actions
+.RS
+.TP
+.B Decode
+Decode the selected file(s).
+.TP
+.B Rename
+Rename the selected file(s), for example if the filename conflicts
+with existing files, or if the name doesn't meet system limitations.
+.TP
+.B Decode All
+Decode all files currently visible in the File List.
+.TP
+.B Info
+Displays available info on the currently selected file (if more than
+one file is selected, only info for the first will be displayed).
+This is the zeroeth part of a file, if available, or the header
+of the first part up to the beginning of encoded data.
+.TP
+.B Execute
+Runs an external program with the currently selected file. A program
+is selected by first looking at the
+.I Content-Type
+of the message, if available, then by checking the file's extension.
+The appropriate information is read from your
+.B .mailcap
+and
+.B .mime.types
+files (although the handling of information in .mailcap files is
+currently incomplete). If no matching type is found, a dialog box
+pops up where you can enter any command.
+.TP
+.B List Text File
+This is for the rare cases when a text file has been sent through
+the net in encoded form. Use this action only when you know the
+file in question is in fact a text file, otherwise you'll get a
+load of trash on the screen.
+.RE
+.TP
+.B Help
+.RS
+.TP
+.B About
+A short message from the Author.
+.TP
+.B License
+Displays the license under which xdeview is distributed, the
+.B GPL.
+Read it, or you'll hear from my lawyers. 
+.SH FILE LIST
+The File List is a list box displaying all the files that have been
+picked up while scanning the encoded data. These files are ready for
+decoding, previewing or anything. The list can be scrolled using the
+scrollbar on the right of the list.
+.PP
+Individual files can be selected simply by clicking on them. Multiple
+files can be selected by holding down the
+.I CTRL
+key and clicking on the individual files.
+.SH STATUS LIST
+The Status Lists notes the corresponding status for each file in the
+.I File List,
+Usually, you'll just see "OK" here; otherwise, an error message is
+shown describing why the file cannot be decoded properly. There are
+the following states:
+.TP
+.B OK
+All parts of the file have been found, and the encoded data looks
+correct on first sight. There are certain problems that might only
+appear when decoding the file, but usually everything is fine.
+.TP
+.B Incomplete
+This file is missing one or more parts. If you decode this file, the
+output data will be corrupt and usually unusable.
+.TP
+.B No Begin
+The file doesn't have a beginning. The decoded file will be most
+certainly corrupt and unusable.
+.TP
+.B No End
+No end was found on the file. This usually means that one or more
+parts at the end are missing. The degree of usefulness of a decoded
+file depends on the file type.
+.TP
+.B Error
+A previous attempt to decode the file has failed.
+.SH SHORT-CUT BUTTONS
+The buttons on the right side of the window are short-cuts for the
+menu items. Read the discussion of the Main Menu items above for an
+explanation.
+.SH SAVE PATH
+This is the path where decoded files will be written to.
+.SH STATUS
+A short message what the program is currently doing or what it expects
+you to do.
+.SH ENCODING MENU
+When encoding files ("Encode" from the "File" menu), a large dialog
+box opens where you can set various options for the file. If you
+selected multiple files for encoding, a status line at the top
+displays the number of files left. The dialog itself stays open
+until all files have been handled.
+.TP
+.B Filename
+The current file to encode. You cannot edit this field.
+.TP
+.B Send As
+The file name by which the file will be sent. Defaults to the filename
+stripped of all directory information.
+.TP
+.B Use Subject
+When mailing or posting, this text will be used as subject. The 
+filename and part numbers are added automatically, so you can
+choose to leave this line empty.
+.TP
+.B Lines per File
+Sets the number of encoded lines per part. Bigger files will be
+automatically split into multiple parts. Use if you are posting files
+to a newsgroup, or if the recipient's system cannot handle large
+files. A good splitting size is 1000 lines. "0" lines means not to
+split.
+.TP
+.B ... Encoding
+Selects the encoding method to use. If you wonder which one's the
+best, you might find a clue in my article "Introduction to Decoding".
+.TP
+.B File In (Path)
+Sets a directory where to encode the file to. The encoding will go to
+files with the same base name as the original file, but with
+extensions of .001, .002 (depending on the number of necessary parts
+as enforced by the "Lines per File" setting).
+.TP
+.B Email To
+Give a comma-separated list of email addresses. This option might be
+disabled if your system does not allow sending of emails.
+.TP
+.B Post To
+Here you can enter a comma-separated list of newsgroups to which the
+file should be posted. This option might be disabled if your system
+does not support posting news.
+.TP
+.B NNTP Server
+This field only appears on some systems, in the case that a news host
+is needed, but none was configured at compile-time. If this field does
+appear, you must enter a valid host name here in order for posting to
+work. If you don't want to post the file anyway, don't worry about it.
+.TP
+.B OK
+Performs the selected action(s) on this file and skips to the next one.
+.TP
+.B OK to All
+Uses these settings for each file in question (does not prompt you for
+the other files), thus sending all files at once.
+.TP
+.B Next
+Does not encode the file and skips to the next one (sorry, there's no
+button to skip backwards).
+.TP
+.B Cancel
+Cancels encoding and returns to the main menu.
+.SH SETUP FILE
+If it exists, the file
+.I .xdeviewrc
+in your home directory will be executed in the Tcl interpreter during
+program initialization. It must be a valid Tcl program, which you can
+use to set certain options by default. For the Tcl-illaterate:
+variables can be set using the following syntax:
+.PD 0
+.PP
+.B set var_name value
+.PP
+.PD
+The following variables (options) can be set (look at the text above
+for an explanation of what they're doing)
+.TP
+.B OptionFast
+If set to 1, use fast scanning mode.
+.TP
+.B OptionBracket
+If set to 1, use the alternate bracket policy.
+.TP
+.B OptionOverwrite
+If set to 1, assume it's Ok to overwrite files without asking.
+.TP
+.B OptionDesperate
+If set to 1, switch into desperate mode.
+.TP
+.B OptionVerbose
+If set to 1, print progress messages.
+.TP
+.B SaveFilePath
+This is a string variable with the default Save Path, where you want
+decoded files to go.
+.TP
+.B EncodeMaxLines
+Maximum number of lines per file for encoding. "0" for unlimited.
+.TP
+.B EncodeEncoding
+Default encoding to use. "0" for UUencoding, "1" for XXencoding and
+"2" for Base64 encoding.
+.TP
+.B NNTPServer
+The address of your NNTP server (only needed on some systems). Can
+also be set (preferredly) in your environment variable
+.I NNTPSERVER.
+.SH RUNTIME MESSGAGES
+If you have enabled verbose mode, progress messages will appear in an
+own text window titled
+.I Runtime Messages.
+The messages generated during the scanning phase are extremely helpful
+in tracing what the program does, and can be used to figure out the
+reason why files cannot be decoded, if you understand them. This
+section explains how to interpret them. Understanding this section is
+not necessary to operate the program.
+.PP
+First, there are "Loading" messages, which begin with the string
+"Loaded". Each line should feature the following items:
+.TP
+.B Source File
+The first item is the source file from which a part was loaded. Many
+parts can be detected within a single file.
+.TP
+.B Subject Line
+The complete subject is reproduced in single quotes.
+.TP
+.B Identifier
+The program derives a unique identification for this thread from the
+subject line, for grouping articles that look like they belong to the
+same file. The result of this algorithm is presented in braces.
+.TP
+.B Filename
+If a filename was detected on the subject line or within the data (for
+example, on a begin line, or as part of the Content-Type information).
+.TP
+.B Part Number
+The part number derived from the subject line, or, in the case of
+properly MIME-formatted messages, from the "part" information.
+.TP
+.B Begin/End
+If a "begin" or "end" token was detected, it is printed here.
+.TP
+.B Encoding Type
+If encoded data was detected within this part, either "UUdata",
+"Base64", "XXdata" or "Binhex" is printed here.
+.PP
+More messages are printed after scanning has completed. A single line
+will be printed for each group of articles. The contents of this line
+are best understood by looking at an example. Here is one:
+.PP
+.B Found 'mailfile.gz' State 16 UUData Parts begin 1 2 3 4 5 end 6 OK
+.PP
+This indicates that the file
+.I mailfile.gz
+has been found. The file was uuencoded ("UUData") and consists of
+6 parts. The "begin" token was found in the first part, and the
+"end" token was found in the sixth part. Because it looks like
+everything's there, this file is tagged as being "OK". The
+.I State
+is a set of bits, where the following values may be or'ed:
+.TP
+.B 1
+Missing Part
+.TP
+.B 2
+No Begin
+.TP
+.B 4
+No End
+.TP
+.B 8
+No encoded data found.
+.TP
+.B 16
+File looks Ok
+.TP
+.B 32
+An error occured during decoding of the file.
+.TP
+.B 64
+File was successfully decoded.
+.SH NOTES
+If you cannot execute
+.I xdeview,
+and it reports something like "command not found", but are sure that
+the file itself can be found, check the reference to the main file
+.I uuwish
+at the top of the file.
+.SH SEE ALSO
+.BR uudeview (1),
+.BR uuenview (1),
+.BR uudecode (1),
+.BR uuencode (1),
+.PD 0
+.PP
+The
+.I uudeview
+homepage on the Web, 
+.PD 0
+.PP
+http://www.fpx.de/fp/Software/UUDeview/

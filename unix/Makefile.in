@@ -1,0 +1,129 @@
+#
+#
+# ============================================================================
+#
+# This is the Makefile for the uudeview package, including the uudeview
+# decoding, the uuenview encoding program, and a mini-inews that can be
+# used by uuencode to post directly to the usenet.
+# The values here were guessed by ./configure and are probably correct.
+#
+# Usefull targets
+#	all		Compile the package
+#	install		Install the binaries and manual pages
+#	clean		Deletes the binaries and objects and all the
+#			other dirty stuff.
+#	tar		Packages everything neatly into a tar.gz file
+#			for distribution.
+#
+# ============================================================================
+#
+# $Id: Makefile.in,v 1.2 2001/06/04 16:26:58 fp Exp $
+#
+# your make might need this
+#
+SHELL	=	/bin/sh
+# 
+# Source and Installation Paths
+#
+prefix	=	@prefix@
+exec_prefix =	@exec_prefix@
+srcdir =	@srcdir@
+VPATH =		@srcdir@
+#
+# Where you want the binaries and the manual pages installed
+#
+BINDIR	=	@bindir@
+MANDIR	=	@mandir@
+#
+# install program. use our own, as AC_PROG_INSTALL doesn't work reliably
+#
+INSTALL	=		@srcdir@/install-sh
+INSTALL_PROGRAM =	${INSTALL} -c
+INSTALL_DATA =		${INSTALL} -c -m 644
+#
+# If you don't have the GNU C compiler installed, set CC=cc here
+#
+CC	=	@CC@
+#
+# C Compiler Options
+#
+CFLAGS	=	@CFLAGS@ -I@srcdir@ @CPPFLAGS@ @DEFS@
+#
+# Libraries to link and their paths
+#
+LIBS	=	@LDFLAGS@ @LIBS@
+#
+# the ranlib program
+#
+RANLIB =	@RANLIB@
+#
+# shared library stuff, if available. not yet active. i first need to
+# find someone who can really explain this to me.
+#
+SHLIB_CFLAGS =	@SHLIB_CFLAGS@
+SHLIB_LD =	@SHLIB_LD@
+SHLIB_SUFFIX =	@SHLIB_SUFFIX@
+SHLIB_VERSION =	@SHLIB_VERSION@
+#
+###############################################################################
+# You shouldn't have to change anything below.
+###############################################################################
+#
+# Programs to compile, Manpages to install and Versions
+#
+VERSION	=	@VERSION@
+PATCH	=	@PATCH@
+VDEF	=	-DVERSION=\"$(VERSION)\" -DPATCH=\"$(PATCH)\"
+#
+@SET_MAKE@
+#
+
+UUDEVIEW_SOURCE	=	uudeview.c uufnflt.c
+UUENVIEW_SOURCE =	uuenview.c uufnflt.c
+UUDEVIEW_OBJ	=	${UUDEVIEW_SOURCE:.c=.o}
+UUENVIEW_OBJ	=	${UUENVIEW_SOURCE:.c=.o}
+
+#
+# make stuff
+#
+
+.SUFFIXES:
+.SUFFIXES: .c .o
+
+all:		uudeview uuenview
+
+clean:
+	rm -f uudeview uuenview
+	rm -f *.o *.a *.so core *~ TAGS
+
+distclean:	clean
+	rm -f config.status config.cache config.log Makefile config.h
+	rm -f uudeview-*tar* uudeview-sfx
+
+realclean:	distclean
+
+install: 	all
+	for d in $(PROGS) ; do \
+		$(INSTALL_PROGRAM) $(srcdir)/$$d $(BINDIR)/$$d ; \
+	done
+	-for d in $(MPAGES) ; do \
+		$(INSTALL_DATA) $(srcdir)/$$d $(MANDIR)/man1/$$d ; \
+	done
+
+new:		clean
+	rm -f uudeview uuenview
+	make all
+
+uudeview:	$(UUDEVIEW_OBJ) ../uulib/libuu.a
+	$(CC) -o $@ $(UUDEVIEW_OBJ) -L../uulib -luu $(LIBS)
+
+uuenview:	$(UUENVIEW_OBJ) ../uulib/libuu.a
+	$(CC) -o $@ $(UUENVIEW_OBJ) -L../uulib -luu $(LIBS)
+
+.c.o:
+	$(CC) -c $(CFLAGS) -I../uulib $(VDEF) $<
+
+uudeview.o:	uudeview.c config.h
+uuenview.o:	uuenview.c config.h
+uufnflt.o:	uufnflt.c uufnflt.h config.h
+
