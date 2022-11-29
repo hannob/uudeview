@@ -95,7 +95,7 @@ proc GetTypeByExtension { ext } {
 
     foreach fname "$MIMELocalTypes $MIMEGlobalTypes" {
 	if { [ catch { open $fname r } fileID ] } {
-	    return
+	    continue
 	}
 	while { ! [ eof $fileID ] } {
 	    if { [ gets $fileID TheLine ] < 0 } {
