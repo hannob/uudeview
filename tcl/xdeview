@@ -59,8 +59,8 @@ ifndef NNTPServer	""
 # MIME configuration
 #
 
-ifndef MIMEGlobalTypes	""
-ifndef MIMEGlobalCap	""
+ifndef MIMEGlobalTypes	"/etc/mime.types"
+ifndef MIMEGlobalCap	"/etc/mailcap"
 if { ! [ catch { set env(HOME) } ] } {
     ifndef MIMELocalTypes	$env(HOME)/.mime.types
     ifndef MIMELocalCap		$env(HOME)/.mailcap
