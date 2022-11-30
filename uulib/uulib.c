@@ -872,7 +872,10 @@ UUDecodeToTemp (uulist *thefile)
 }
 
 /*
- * decode file first to temp file, then copy it to a final location
+ * Decode file first to temp file, then copy it to a final location.
+ * A move is preferable to a copy.  If the file is on the same
+ * partition, no copy is performed.  This is important for large
+ * files.
  */
 
 int UUEXPORT
@@ -978,6 +981,12 @@ UUDecodeFile (uulist *thefile, char *destname)
     return UURET_IOERR;
   }
 
+  if (rename(thefile->binfile, uugen_fnbuffer) == 0) {
+    fclose(source);
+    close(fildes);
+    goto finish_ok;
+  }
+
   if ((target = fdopen (fildes, "wb")) == NULL) {
     progress.action = 0;
     UUMessage (uulib_id, __LINE__, UUMSG_ERROR,
@@ -1042,6 +1051,8 @@ UUDecodeFile (uulist *thefile, char *destname)
 	       thefile->binfile,
 	       strerror (uu_errno = errno));
   }
+
+ finish_ok:
   _FP_free (thefile->binfile);
   thefile->binfile = NULL;
   thefile->state  &= ~UUFILE_TMPFILE;
