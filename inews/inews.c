@@ -303,7 +303,7 @@ gen_frompath()
 			putc(*cp, ser_wr_fp);
 		else {		/* Stupid & hack.  God damn it. */
 			putc(toupper(passwd->pw_name[0]), ser_wr_fp);
-			fprintf(ser_wr_fp, passwd->pw_name+1);
+			fprintf(ser_wr_fp, "%s", passwd->pw_name+1);
 		}
 
 	fprintf(ser_wr_fp, ")\r\n");
