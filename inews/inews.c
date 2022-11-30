@@ -143,7 +143,7 @@ char	*argv[];
 		fprintf(ser_wr_fp, "%s\r\n", s);
 	}
 
-	append_signature();
+	void append_signature();
 
 	fprintf(ser_wr_fp, ".\r\n");
 	(void) fflush(ser_wr_fp);
@@ -181,7 +181,7 @@ char	*argv[];
  * The rn-style DOTDIR environmental variable is used if present.
  */
 
-append_signature()
+void append_signature()
 {
 	char	line[256], sigfile[256];
 	char	*cp;
