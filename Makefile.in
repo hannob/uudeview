@@ -212,3 +212,5 @@ unix/config.h:	config.h
 uulib/config.h:	config.h
 	(cd uulib; rm -f config.h ; $(LN) ../config.h config.h)
 
+check:
+	test/test.sh
