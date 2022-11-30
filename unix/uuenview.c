@@ -310,7 +310,7 @@ SendMkCommand (char **rcptlist, char *towhom, char *subject, int isemail)
   }
 
   if ((*rcptlist = (char *) malloc (strlen (towhom) + 16)) == NULL) {
-    fprintf (stderr, "error: Out of memory allocating %d bytes\n",
+    fprintf (stderr, "error: Out of memory allocating %zd bytes\n",
 	     strlen (towhom)+16);
     _FP_free (command);
     return NULL;
@@ -483,7 +483,7 @@ AttachFiles (char *towhom, char *subject,
       if (_FP_stristr (input, "multipart") != NULL) {
 	/* it is already a multipart posting. grab the boundary */
 	if ((ptr = _FP_stristr (input, "boundary=")) != NULL) {
-	  fprintf(thepipe,  input);
+	  fprintf(thepipe,  "%s", input);
 	  strcpy (boundary, ParseValue (ptr));
 	  hadmulti = 1;
 	}
