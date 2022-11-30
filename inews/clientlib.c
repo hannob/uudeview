@@ -14,6 +14,7 @@ static char	*sccsid = "@(#)clientlib.c	1.11	(Berkeley) 10/27/89";
 #include "../config.h"
 #endif
 
+#include <arpa/inet.h>
 #include <stdio.h>
 #ifndef FOR_NN
 #include <sys/types.h>
@@ -52,6 +53,7 @@ static char	*sccsid = "@(#)clientlib.c	1.11	(Berkeley) 10/27/89";
 #endif
 
 #include "nntp.h"
+#include "clientlib.h"
 
 FILE	*ser_rd_fp = NULL;
 FILE	*ser_wr_fp = NULL;
@@ -133,7 +135,7 @@ char	*file;
  *			for reading and writing to server.
  */
 
-server_init(machine)
+int server_init(machine)
 char	*machine;
 {
 	int	sockt_rd, sockt_wr;
@@ -194,7 +196,7 @@ char	*machine;
  *	Errors:		Printed via perror.
  */
 
-get_tcp_socket(machine)
+int get_tcp_socket(machine)
 char	*machine;
 {
 	int	s;
@@ -218,7 +220,6 @@ char	*machine;
         * fails.
         */
        if( (hp = gethostbyname( machine ) ) == NULL ) {
-               unsigned long inet_addr();
                static struct hostent def;
                static struct in_addr defaddr;
                static char *alist[1];
@@ -344,7 +345,7 @@ char	*machine;
  *	Errors:		Printed via nerror.
  */
 
-get_dnet_socket(machine)
+int get_dnet_socket(machine)
 char	*machine;
 {
 	int	s, area, node;
@@ -427,7 +428,7 @@ char	*machine;
  *	Side effects:	None.
  */
 
-handle_server_response(response, server)
+int handle_server_response(response, server)
 int	response;
 char	*server;
 {
@@ -502,7 +503,7 @@ char *string;
  *	Side effects:	Talks to server, changes contents of "string".
  */
 
-get_server(string, size)
+int get_server(string, size)
 char	*string;
 int	size;
 {

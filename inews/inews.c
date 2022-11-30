@@ -39,15 +39,20 @@ static char *sccsid = "@(#)inews.c	1.16	(Berkeley) 8/27/89";
 
 #include "conf.h"
 #include "nntp.h"
+#include "clientlib.h"
 
 
 #define	MAX_SIGNATURE	6
+
+int strneql(char *a, char *b, int n);
+void gen_frompath(void);
+int valid_header(register char *h);
 
 extern	FILE	*ser_wr_fp;
 
 char	host_name[256];
 
-main(argc, argv)
+int main(argc, argv)
 int	argc;
 char	*argv[];
 {
@@ -254,7 +259,7 @@ void append_signature()
  * a From: line in it.
  */
 
-gen_frompath()
+void gen_frompath()
 {
 	char	*full_name;
 	char	*cp;
@@ -330,7 +335,7 @@ gen_frompath()
  *	Side effects:	None.
  */
 
-strneql(a, b, n)
+int strneql(a, b, n)
 register char *a, *b;
 int	n;
 {
