@@ -1,0 +1,12 @@
+name: Run CI tests
+on:
+- push
+- pull_requests
+
+jobs:
+  runci:
+    runs-on: ubuntu-latest
+    steps:
+      - run: apt-get update
+      - run: apt-get install -y build-essential autoconf
+      - run: ./runci.sh
