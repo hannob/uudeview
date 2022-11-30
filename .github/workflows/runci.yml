@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.1.0
-      - run: apt-get update
-      - run: apt-get install -y build-essential autoconf
-      - run: ./runci.sh
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential autoconf
+      - name: Run CI
+        run: |
+          ./runci.sh
