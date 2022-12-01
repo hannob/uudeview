@@ -607,7 +607,7 @@ if test "x$have_minews" = "xyes" ; then
 fi
 if test "x$have_tk" != "xno" ; then
 	PROGS="$PROGS xdeview"
-	MPAGES="$MPAGES xdeview.1"
+	MPAGES="$MPAGES xdeview.1 uuwish.1"
 	DOINST="$DOINST install-tcl"
 fi
 
