@@ -2344,7 +2344,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
 	}
       }
       /* produce result if uu_handletext is set */
-      /* or if the file is explicitely named */
+      /* or if the file is explicitly named */
       if (result->uudet == B64ENCODED || lcount) {
 	if (localenv.fname) {
 	  _FP_free (result->filename);

@@ -1174,7 +1174,7 @@ proc Encode {} {
 		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
 		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
 		tk_dialog ._Dialog { Error while Encoding } "The following\
-			error occured while encoding into a file: $message" \
+			error occurred while encoding into a file: $message" \
 			error 0 OK
 	    }
 	}
@@ -1185,7 +1185,7 @@ proc Encode {} {
 		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
 		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
 		tk_dialog ._Dialog { Error while Encoding } "The following\
-			error occured while sending the file via mail:\
+			error occurred while sending the file via mail:\
 			$message" \
 			error 0 OK
 	    }
@@ -1197,7 +1197,7 @@ proc Encode {} {
 		    $EncodeFileName $EncodeSubject "" $EncodeMaxLines \
 		    $EncodeEncoding $EncodeFrom $EncodeReplyTo } message ] } {
 		tk_dialog ._Dialog { Error while Encoding } "The following\
-			error occured while sending the file via news:\
+			error occurred while sending the file via news:\
 			$message" \
 			error 0 OK
 	    }
@@ -1270,7 +1270,7 @@ proc DecodeProc { DecodeList } {
 
 	if { $result } {
 	    tk_dialog ._Dialog "Error while Decoding" "The following\
-		    problem occured while decoding: $errorMsg" \
+		    problem occurred while decoding: $errorMsg" \
 		    error 0 OK
 	    continue
 	}
@@ -1362,7 +1362,7 @@ proc InfoFile { TheInfoFile } {
     .info.top.text configure -state normal
 
     if { [ catch { uu_InfoFile $FileNumber .info.top.text } errorMsg ] } {
-	tk_dialog ._Dialog "No Info" "The following problem occured\
+	tk_dialog ._Dialog "No Info" "The following problem occurred\
 		while trying to get Info: $errorMsg" error 0 OK
     }
 
@@ -1419,7 +1419,7 @@ proc List {} {
     .list.top.text configure -state normal
 
     if { [ catch { uu_ListFile $ListFile .list.top.text } errorMsg ] } {
-	tk_dialog ._Dialog "Oops" "The following problem occured\
+	tk_dialog ._Dialog "Oops" "The following problem occurred\
 		while trying to list the file: $errorMsg" error 0 OK
     }
 
@@ -1551,7 +1551,7 @@ proc Execute {} {
 
     if { [ catch { uu_GetTempFile $FileNumb } tempFile ] } {
 	tk_dialog ._Dialog "Error while decoding" "The following problem\
-		occured while decoding: $tempFile" \
+		occurred while decoding: $tempFile" \
 		error 0 OK
     } else {
 	#
@@ -1632,7 +1632,7 @@ proc Execute {} {
 
 	    if { [ catch { eval exec $RunString } errorMsg ] } {
 		tk_dialog ._Dialog "Execution failed" "The following problem\
-			occured while executing your command: $errorMsg" \
+			occurred while executing your command: $errorMsg" \
 			error 0 OK
 	    }
 	}

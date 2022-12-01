@@ -11,7 +11,7 @@
  *	4xx	Command was correct, but couldn't be performed
  *		for some specified reason.
  *	5xx	Command unimplemented, incorrect, or a
- *		program error has occured.
+ *		program error has occurred.
  *
  * Second digit:
  *

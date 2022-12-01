@@ -78,7 +78,7 @@
 
 /* 
  * your mailing program. full path and the necessary parameters.
- * the recepient address is added to the command line (with a leading
+ * the recipient address is added to the command line (with a leading
  * space) without any further options
  */
 #undef PROG_MAILER

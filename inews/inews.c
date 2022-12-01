@@ -86,7 +86,7 @@ char	*argv[];
 			"Can't get the name of the news server from %s.\n",
 			SERVER_FILE);
 		fprintf(stderr,
-	       "Either fix this file, or put NNTPSERVER in your enviroment.\n");
+	       "Either fix this file, or put NNTPSERVER in your environment.\n");
 		exit(1);
 	}
 

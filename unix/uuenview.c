@@ -163,7 +163,7 @@ usage (char *argv0)
 \tinfile      the local file, where to read data from. If no infile\n\
 \t            is given, or infile is a single hyphen, the standard\n\
 \t            input is used instead.\n\
-\tremotefile  the name as which the recepient will receive the file\n\
+\tremotefile  the name as which the recipient will receive the file\n\
 \n\
   For much more powerful encoding facilities, try calling this program\n\
   as 'uuenview'.\n\
@@ -1285,7 +1285,7 @@ main (int argc, char *argv[])
       }
 
       /*
-       * mail it separately to each recepient
+       * mail it separately to each recipient
        */
 
       if (outflags[UUE_MAILTO] > 0) {
