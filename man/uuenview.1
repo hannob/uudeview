@@ -108,6 +108,17 @@ or
 .B -p
 in order to directly mail or post the result. Else, the message,
 complete with attachments, is written to standard output.
+
+Uudeview is using a heuristic to determine where the provided message
+headers end and the message body starts. If the first line does
+.B not
+start
+with either
+.I "From "
+or some non-whitespace characters followed by a colon (e.g.
+"X-header-blah:" or "Patch#1:") uuenview interprets the whole input as
+message body. Else anything before the first empty line is interpreted as
+headers and the rest of the provided input is taken as message body.
 .PP
 If no target option is given, the encoded data is printed to standard
 output.
