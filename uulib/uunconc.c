@@ -1311,6 +1311,9 @@ UUDecode (uulist *data)
   char *mode, *ntmp;
   uufile *iter;
   size_t bytes;
+  int tmpfd;
+  const char *tmpprefix = "uuXXXXXX";
+  char *tmpdir = NULL;
 
   if (data == NULL || data->thisfile == NULL)
     return UURET_ILLVAL;
@@ -1329,13 +1332,25 @@ UUDecode (uulist *data)
   else
     mode = "wb";	/* otherwise in binary          */
 
-  if ((data->binfile = tempnam (NULL, "uu")) == NULL) {
+  if ((getuid()==geteuid()) && (getgid()==getegid())) {
+    tmpdir=getenv("TMPDIR");
+  }
+
+  if (!tmpdir) {
+    tmpdir = "/tmp";
+  }
+  data->binfile = malloc(strlen(tmpdir)+strlen(tmpprefix)+2);
+
+  if (!data->binfile) {
     UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
 	       uustring (S_NO_TEMP_NAME));
     return UURET_NOMEM;
   }
 
-  if ((dataout = fopen (data->binfile, mode)) == NULL) {
+  sprintf(data->binfile, "%s/%s", tmpdir, tmpprefix);
+
+  if ((tmpfd = mkstemp(data->binfile)) == -1 ||
+	  (dataout = fdopen(tmpfd, mode)) == NULL) {
     /*
      * we couldn't create a temporary file. Usually this means that TMP
      * and TEMP aren't set
@@ -1343,6 +1358,10 @@ UUDecode (uulist *data)
     UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
 	       uustring (S_WR_ERR_TARGET),
 	       data->binfile, strerror (uu_errno = errno));
+    if (tmpfd != -1) {
+      unlink(data->binfile);
+      close(tmpfd);
+    }
     _FP_free (data->binfile);
     data->binfile = NULL;
     uu_errno = errno;
@@ -1496,7 +1515,9 @@ UUDecode (uulist *data)
    */
 
   if (data->uudet == BH_ENCODED && data->binfile) {
-    if ((ntmp = tempnam (NULL, "uu")) == NULL) {
+    ntmp = malloc(strlen(tmpdir)+strlen(tmpprefix)+2);
+
+    if (ntmp == NULL) {
       UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
 		 uustring (S_NO_TEMP_NAME));
       progress.action = 0;
@@ -1510,12 +1531,19 @@ UUDecode (uulist *data)
       free (ntmp);
       return UURET_IOERR;
     }
-    if ((dataout = fopen (ntmp, "wb")) == NULL) {
+
+    sprintf(ntmp, "%s/%s", tmpdir, tmpprefix);
+    if ((tmpfd = mkstemp(ntmp)) == -1 ||
+		(dataout = fdopen(tmpfd, "wb")) == NULL) {
       UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_TARGET),
 		 ntmp, strerror (uu_errno = errno));
       progress.action = 0;
       fclose (datain);
+      if (tmpfd != -1) {
+        unlink(ntmp);
+        close(tmpfd);
+      }
       free   (ntmp);
       return UURET_IOERR;
     }

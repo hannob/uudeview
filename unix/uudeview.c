@@ -443,20 +443,39 @@ proc_stdin (void)
   FILE *target;
   size_t bytes;
   int res;
+  int tmpfd;
+  const char *tmpprefix = "uuXXXXXX";
+  char *tmpdir = NULL;
 
   if (stdinput) {
     fprintf (stderr, "proc_stdin: cannot process stdin twice\n");
     return 0;
   }
 
-  if ((stdfile = tempnam (NULL, "uu")) == NULL) {
-    fprintf (stderr, "proc_stdin: cannot get temporary file\n");
+  if ((getuid()==geteuid()) && (getgid()==getegid())) {
+    tmpdir=getenv("TMPDIR");
+  }
+
+  if (!tmpdir) {
+    tmpdir = "/tmp";
+  }
+  stdfile = malloc(strlen(tmpdir)+strlen(tmpprefix)+2);
+
+  if (!stdfile) {
+    fprintf (stderr, "proc_stdin: cannot allocate temp file name\n");
     return 0;
   }
 
-  if ((target = fopen (stdfile, "wb")) == NULL) {
+  sprintf(stdfile, "%s/%s", tmpdir, tmpprefix);
+
+  if ((tmpfd = mkstemp(stdfile)) == -1 ||
+	  (target = fdopen(tmpfd, "wb")) == NULL) {
     fprintf (stderr, "proc_stdin: cannot open temp file %s for writing: %s\n",
 	     stdfile, strerror (errno));
+    if (tmpfd != -1) {
+      unlink(stdfile);
+      close(tmpfd);
+    }
     _FP_free (stdfile);
     return 0;
   }
