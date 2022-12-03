@@ -509,7 +509,7 @@ AC_CHECK_HEADERS(fcntl.h unistd.h memory.h malloc.h errno.h direct.h)
 AC_CHECK_HEADERS(io.h sys/time.h)
 AC_CHECK_FUNCS(getcwd popen gettimeofday isatty)
 
-AC_CHECK_FUNC(tempnam,,AC_DEFINE(tempnam,_FP_tempnam))
+AC_CHECK_FUNC([mkstemp],,[AC_MSG_ERROR([needs mkstemp])])
 
 #
 # strerror might be internally defined. this would cause a
