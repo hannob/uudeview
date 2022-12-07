@@ -819,8 +819,8 @@ ScanData (FILE *datei, char *fname, int *errcode,
 	}
 	if ((ptr = strchr (line, ':')) != NULL) {
 	  ptr++;
-	  while (isspace (*ptr)) ptr++; p2 = ptr;
-	  while (!isspace (*p2) && *p2 != ';') p2++;
+	  while (ptr[0] && isspace (*ptr)) ptr++; p2 = ptr;
+	  while (p2[0] && !isspace (*p2) && *p2 != ';') p2++;
 	  c = *p2; *p2 = '\0';
 	  if (p2 != ptr) {
 	    _FP_free (result->mimetype);
