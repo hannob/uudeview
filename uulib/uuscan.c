@@ -631,8 +631,11 @@ ScanData (FILE *datei, char *fname, int *errcode,
 
   while (!feof (datei)) {
     oldposition = ftell (datei);
-    if (_FP_fgets (line, 255, datei) == NULL)
+    if (_FP_fgets (line, 255, datei) == NULL) {
+      /* make sure line contains empty string to avoid uninitialized reads */
+      line[0] = '\0';
       break;
+    }
     if (ferror (datei))
       break;
 
