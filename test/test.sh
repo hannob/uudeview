@@ -22,4 +22,13 @@ for fn in "$MYDIR"/*.bad.msg; do
 	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn"
 done
 
+# Files ending with .fail.msg trigger memory safety bugs,
+# they differ from .bad.msg fails that uudeview will try
+# to decode input, so we expect them to return an error,
+# still they should not crash.
+for fn in "$MYDIR"/*.fail.msg; do
+	# uudeview returns 2 on errors
+	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn" || [ $? -eq 2 ]
+done
+
 rmdir "$TMPD"
