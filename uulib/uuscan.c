@@ -746,7 +746,7 @@ ScanData (FILE *datei, char *fname, int *errcode,
       result->filename = _FP_strdup (ptr);
       result->begin    = 1;
 
-      while (isspace (result->filename[strlen(result->filename)-1]))
+      while ((strlen(result->filename) > 0) && isspace (result->filename[strlen(result->filename)-1]))
 	result->filename[strlen(result->filename)-1] = '\0';
 
       continue;
