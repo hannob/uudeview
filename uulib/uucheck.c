@@ -536,7 +536,7 @@ UUGetPartNo (char *subject, char **where, char **whend)
     if ((iter = _FP_strirstr (subject, "of")) != NULL) {
       while (iter>subject && isspace (*(iter-1)))
 	iter--;
-      if (isdigit(*(iter-1))) {
+      if (iter > subject && isdigit(*(iter-1))) {
 	while (iter>subject && isdigit (*(iter-1)))
 	  iter--;
 	if (!isdigit (*iter) && !isalpha (*iter) && *iter != '.')
