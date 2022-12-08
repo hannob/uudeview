@@ -28,7 +28,7 @@ done
 # still they should not crash.
 for fn in "$MYDIR"/*.fail.msg; do
 	# uudeview returns 2 on errors
-	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn" || [ $? -eq 2 ]
+	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn" && false || [ $? -eq 2 ]
 done
 
 rmdir "$TMPD"
