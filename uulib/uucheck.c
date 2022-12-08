@@ -200,6 +200,8 @@ UUGetFileName (char *subject, char *ptonum, char *ptonend)
       }
       count = length = 0;
       iter++;
+      if (iter[0] == '\0')
+        break;
       while (iter[count] &&
 	     (isalnum(iter[count])||strchr(fnchars, iter[count])!=NULL))
 	count++;
