@@ -7,6 +7,7 @@ TMPD="$(mktemp -d)"
 # All test files ending with .good.msg contain the
 # file doc/test.txt with various encodings.
 for fn in "$MYDIR"/*.good.msg; do
+	echo -e "\033[0;32mTesting good test case $fn\033[0m"
 	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn"
 
 	diff "$MYDIR"/../doc/test.txt "$TMPD"/test.txt
@@ -19,6 +20,7 @@ done
 # do not contain valid data, thus we do not expect
 # extracted files, we just do not want them to crash.
 for fn in "$MYDIR"/*.bad.msg; do
+	echo -e "\033[0;33mTesting bad test case $fn\033[0m"
 	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn"
 done
 
@@ -27,8 +29,12 @@ done
 # to decode input, so we expect them to return an error,
 # still they should not crash.
 for fn in "$MYDIR"/*.fail.msg; do
+	echo -e "\033[1;33mTesting fail test case $fn\033[0m"
 	# uudeview returns 2 on errors
 	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn" && false || [ $? -eq 2 ]
 done
 
 rmdir "$TMPD"
+
+echo
+echo -e "\033[1;34mAll tests ran as expected\033[0m"
