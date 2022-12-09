@@ -1114,9 +1114,8 @@ UUInfoFile (uulist *thefile, void *opaque,
 
   while (!feof (inpfile) && 
 	 (uu_fast_scanning || ftell(inpfile) < maxpos)) {
-    if (_FP_fgets (uugen_inbuffer, 511, inpfile) == NULL)
+    if (_FP_fgets (uugen_inbuffer, 1024, inpfile) == NULL)
       break;
-    uugen_inbuffer[511] = '\0';
 
     if (ferror (inpfile))
       break;
