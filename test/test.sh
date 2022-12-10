@@ -49,9 +49,9 @@ for enc in b u x y; do
 done
 
 echo -e "\033[0;36mTesting split uuencoded file\033[0m"
-uuenview -200 -od "$TMPD" "$TMPD/test.bin"
+"$MYDIR"/../unix/uuenview -200 -od "$TMPD" "$TMPD/test.bin"
 rm "$TMPD/test.bin"
-uudeview "$TMPD"/test.* -p "$TMPD" -i
+"$MYDIR"/../unix/uudeview "$TMPD"/test.* -p "$TMPD" -i
 diff "$TMPD/_test.bin" "$TMPD/test.bin"
 
 rm -r "$TMPD"
