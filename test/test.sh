@@ -34,7 +34,27 @@ for fn in "$MYDIR"/*.fail.msg; do
 	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$fn" && false || [ $? -eq 2 ]
 done
 
-rmdir "$TMPD"
+# Test encoding and decoding of a random file of random size.
+head -c $RANDOM /dev/urandom > "$TMPD/test.bin"
+cp "$TMPD/test.bin" "$TMPD/_test.bin"
+for enc in b u x y; do
+	echo -e "\033[0;35mTesting uuenview -$enc\033[0m"
+	echo -en "From:a\nTo:b\nSubject:test\n\n" | \
+		"$MYDIR"/../unix/uuenview -$enc -a "$TMPD/test.bin" > \
+		"$TMPD/test.$enc.msg"
+	rm "$TMPD/test.bin"
+	"$MYDIR"/../unix/uudeview -i -p "$TMPD" "$TMPD/test.$enc.msg"
+	diff "$TMPD/_test.bin" "$TMPD/test.bin"
+	rm "$TMPD/test.$enc.msg"
+done
+
+echo -e "\033[0;36mTesting split uuencoded file\033[0m"
+uuenview -200 -od "$TMPD" "$TMPD/test.bin"
+rm "$TMPD/test.bin"
+uudeview "$TMPD"/test.* -p "$TMPD" -i
+diff "$TMPD/_test.bin" "$TMPD/test.bin"
+
+rm -r "$TMPD"
 
 echo
 echo -e "\033[1;34mAll tests ran as expected\033[0m"
