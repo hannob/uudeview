@@ -1456,6 +1456,9 @@ UUDecode (uulist *data)
 	res = UURET_IOERR;
 	break;
       }
+      UUMessage (uunconc_id, __LINE__, UUMSG_MESSAGE,
+		uustring (S_OPEN_FILE),
+		iter->data->sfname);
       _FP_strncpy (uugen_fnbuffer, iter->data->sfname, 1024);
     }
 

@@ -107,6 +107,7 @@ static stringmap messages[] = {
   { S_MIME_B_NOT_FOUND, "Boundary expected on Multipart message but found EOF" },
   { S_MIME_MULTI_DEPTH, "Multipart message nested too deep" },
   { S_MIME_PART_MULTI,  "Handling partial multipart message as plain text" },
+  { S_OPEN_FILE,        "Opened file %s" },
 
   { 0, "" }
 };

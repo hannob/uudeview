@@ -36,3 +36,4 @@
 #define S_MIME_B_NOT_FOUND    35
 #define S_MIME_MULTI_DEPTH    36
 #define S_MIME_PART_MULTI     37
+#define S_OPEN_FILE           38
