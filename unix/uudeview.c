@@ -676,9 +676,6 @@ work_comline (int argc, char *argv[])
     else switch (*(argv[number] + 1)) {
     case '\0':
       interact = 0;
-      if (overwrite == 0) {
-	overwrite = 1;
-      }
       proc_stdin ();
       break;
     case 'a':
@@ -718,10 +715,7 @@ work_comline (int argc, char *argv[])
 	fprintf (stderr, "WARNING: cannot interact when reading from stdin\n");
       }
       else {
-	interact  = (*argv[number] == '+') ? 1 : 0;
-	if (overwrite == 0 && *argv[number] == '-') {
-	  overwrite = 1;
-	}
+	interact = (*argv[number] == '+') ? 1 : 0;
       }
       break;
     case 'm':
@@ -792,6 +786,8 @@ work_comline (int argc, char *argv[])
       break;
     }
   }
+  if (overwrite == 0 && interact == 0 && autoren == 0)
+    overwrite = 1;
 
   return 1;
 }
