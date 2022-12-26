@@ -54,6 +54,9 @@ rm "$TMPD/test.bin"
 "$MYDIR"/../unix/uudeview "$TMPD"/test.* -p "$TMPD" -i
 diff "$TMPD/_test.bin" "$TMPD/test.bin"
 
+echo -e "\033[1;95mTesting invalid TMPDIR\033[0m"
+TMPDIR="/dev/null" "$MYDIR"/../unix/uudeview -i "$MYDIR"/mime-base64.good.msg && false || [ $? -eq 2 ]
+
 rm -r "$TMPD"
 
 echo
