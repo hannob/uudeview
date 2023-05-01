@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-autoconf
+autoreconf -i
 
 # Test with ASAN / Address Sanitizer
 export ASAN_OPTIONS="abort_on_error=1"
