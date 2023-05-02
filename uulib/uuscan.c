@@ -381,17 +381,21 @@ ParseValue (char *attribute)
      * used in some Content-Type fields by the Klez virus, and people
      * who feed their virus scanners with the output of UUDeview would
      * like to catch it!
+     * Update: Only exclude them if KLEZ_HACK is set.
      */
 
     while (*attribute && !isspace (*attribute) &&
 	   *attribute != '(' && *attribute != ')' &&
 	   *attribute != '<' && *attribute != '>' &&
 	   *attribute != '@' && *attribute != ',' &&
-	   /* *attribute != ';' && */ *attribute != ':' &&
 	   *attribute != '\\' &&*attribute != '"' &&
-	   *attribute != '/' && /* *attribute != '[' &&
-	   *attribute != ']' && */ *attribute != '?' &&
-	   *attribute != '=' && length < 255) {
+	   *attribute != '/' && *attribute != '?' &&
+	   *attribute != ':' && *attribute != '=' &&
+#ifndef KLEZ_HACK
+	   *attribute != ';' && *attribute != '[' &&
+	   *attribute != ']' &&
+#endif
+	   length < 255) {
       *ptr++ = *attribute++;
       length++;
     }
