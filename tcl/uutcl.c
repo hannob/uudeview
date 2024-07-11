@@ -359,7 +359,7 @@ uutcl_UpdateParameter (Tcl_Interp *interp)
  */
 
 static int
-uutcl_HaveArg (int argc, char *argv[], char *string)
+uutcl_HaveArg (int argc, const char *argv[], char *string)
 {
   int index;
 
@@ -372,7 +372,7 @@ uutcl_HaveArg (int argc, char *argv[], char *string)
 
 static int UUTCLFUNC
 uutcl_Info (ClientData clientData, Tcl_Interp *interp,
-	    int argc, char *argv[])
+	    int argc, const char *argv[])
 {
   char temp[64], version[64];
 
@@ -454,7 +454,7 @@ uutcl_Info (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_SetMessageProc (ClientData clientData, Tcl_Interp *interp,
-		      int argc, char *argv[])
+		      int argc, const char *argv[])
 {
   char tmpstring[256];
 
@@ -475,7 +475,7 @@ uutcl_SetMessageProc (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_SetBusyProc (ClientData clientData, Tcl_Interp *interp,
-		   int argc, char *argv[])
+		   int argc, const char *argv[])
 {
   char tmpstring[256];
   long msecs;
@@ -501,7 +501,7 @@ uutcl_SetBusyProc (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_GetProgressInfo (ClientData clientData, Tcl_Interp *interp,
-		       int argc, char *argv[])
+		       int argc, const char *argv[])
 {
   uuprogress progress;
   char tmpstring[32];
@@ -530,7 +530,7 @@ uutcl_GetProgressInfo (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_GetListOfFiles (ClientData clientData, Tcl_Interp *interp,
-		      int argc, char *argv[])
+		      int argc, const char *argv[])
 {
   char tmpstring[1024], t2[42];
   int count=0, index=0;
@@ -585,7 +585,7 @@ uutcl_GetListOfFiles (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_LoadFile (ClientData clientData, Tcl_Interp *interp,
-		int argc, char *argv[])
+		int argc, const char *argv[])
 {
   char tmpstring[256];
   int res;
@@ -619,7 +619,7 @@ uutcl_LoadFile (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_DecodeFile (ClientData clientData, Tcl_Interp *interp,
-		  int argc, char *argv[])
+		  int argc, const char *argv[])
 {
   char tmpstring[256];
   uulist *iter;
@@ -656,7 +656,7 @@ uutcl_DecodeFile (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_GetTempFile (ClientData clientData, Tcl_Interp *interp,
-		   int argc, char *argv[])
+		   int argc, const char *argv[])
 {
   char tmpstring[256];
   uulist *iter;
@@ -742,7 +742,7 @@ uutcl_InfoCallback (void *param, char *string)
 
 static int UUTCLFUNC
 uutcl_InfoFile (ClientData clientData, Tcl_Interp *interp,
-		int argc, char *argv[])
+		int argc, const char *argv[])
 {
   struct uuInfoCBData data;
   char tmpstring[256];
@@ -794,7 +794,7 @@ uutcl_InfoFile (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_ListFile (ClientData clientData, Tcl_Interp *interp,
-		int argc, char *argv[])
+		int argc, const char *argv[])
 {
   uulist *iter;
   struct uuInfoCBData data;
@@ -877,7 +877,7 @@ uutcl_ListFile (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_Rename (ClientData clientData, Tcl_Interp *interp,
-	      int argc, char *argv[])
+	      int argc, const char *argv[])
 {
   char tmpstring[256];
   uulist *iter;
@@ -923,7 +923,7 @@ uutcl_Rename (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_CleanUp (ClientData clientData, Tcl_Interp *interp,
-	       int argc, char *argv[])
+	       int argc, const char *argv[])
 {
   uutcl_UpdateParameter (interp);
 
@@ -939,7 +939,7 @@ uutcl_CleanUp (ClientData clientData, Tcl_Interp *interp,
 
 static int
 uutcl_GetEncodeParams (Tcl_Interp *interp,
-		       int argc,  char *argv[],
+		       int argc,  const char *argv[],
 		       int argv1, int *encoding,
 		       int argv2, int *linperfile)
 {
@@ -1002,7 +1002,7 @@ uutcl_GetEncodeParams (Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_EncodeToFile (ClientData clientData, Tcl_Interp *interp,
-		    int argc, char *argv[])
+		    int argc, const char *argv[])
 {
   int encoding=UU_ENCODED, linperfile=0, res;
   char errstring[256], olddir[256];
@@ -1049,7 +1049,7 @@ uutcl_EncodeToFile (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_EncodeToMail (ClientData clientData, Tcl_Interp *interp,
-		    int argc, char *argv[])
+		    int argc, const char *argv[])
 {
   int encoding=UU_ENCODED, linperfile=0, res;
   char errstring[256];
@@ -1098,7 +1098,7 @@ uutcl_EncodeToMail (ClientData clientData, Tcl_Interp *interp,
 
 static int UUTCLFUNC
 uutcl_EncodeToNews (ClientData clientData, Tcl_Interp *interp,
-		    int argc, char *argv[])
+		    int argc, const char *argv[])
 {
   int encoding=UU_ENCODED, linperfile=0, res;
   char errstring[256];
