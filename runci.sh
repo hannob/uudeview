@@ -23,3 +23,11 @@ export UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
 make clean
 make
 make check
+
+# Test with tcl/tk enabled
+# Install tcl/tk dev libraries
+sudo apt update
+sudo apt intall tcl-dev tk-dev
+./configure CC=clang LD=clang --enable-tk=/usr/include/tcl/ --enable-tcl=/usr/include/tk/
+make clean
+make xdeview
