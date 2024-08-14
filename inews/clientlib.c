@@ -73,8 +73,7 @@ FILE	*ser_wr_fp = NULL;
  */
 
 char *
-getserverbyfile(file)
-char	*file;
+getserverbyfile(char	*file)
 {
 	register FILE	*fp;
 	register char	*cp;
@@ -135,8 +134,7 @@ char	*file;
  *			for reading and writing to server.
  */
 
-int server_init(machine)
-char	*machine;
+int server_init(char	*machine)
 {
 	int	sockt_rd, sockt_wr;
 	char	line[256];
@@ -196,8 +194,7 @@ char	*machine;
  *	Errors:		Printed via perror.
  */
 
-int get_tcp_socket(machine)
-char	*machine;
+int get_tcp_socket(char	*machine)
 {
 	int	s;
 	struct	sockaddr_in sin;
@@ -345,8 +342,7 @@ char	*machine;
  *	Errors:		Printed via nerror.
  */
 
-int get_dnet_socket(machine)
-char	*machine;
+int get_dnet_socket(char	*machine)
 {
 	int	s, area, node;
 	struct	sockaddr_dn sdn;
@@ -428,9 +424,7 @@ char	*machine;
  *	Side effects:	None.
  */
 
-int handle_server_response(response, server)
-int	response;
-char	*server;
+int handle_server_response(int	response, char	*server)
 {
     switch (response) {
 	case OK_NOPOST:		/* fall through */
@@ -479,8 +473,7 @@ char	*server;
  */
 
 void
-put_server(string)
-char *string;
+put_server(char *string)
 {
 #ifdef DEBUG
 	fprintf(stderr, ">>> %s\n", string);
@@ -503,9 +496,7 @@ char *string;
  *	Side effects:	Talks to server, changes contents of "string".
  */
 
-int get_server(string, size)
-char	*string;
-int	size;
+int get_server(char	*string, int	size)
 {
 	register char *cp;
 
