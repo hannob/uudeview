@@ -53,7 +53,7 @@ extern	FILE	*ser_wr_fp;
 
 char	host_name[256];
 
-int main(int	argc, char	*argv[])
+int main(int argc, char *argv[])
 {
 	char	line[NNTP_STRLEN], s[NNTP_STRLEN];
 	int	seen_fromline, in_header, seen_header;
@@ -334,7 +334,7 @@ void gen_frompath()
  *	Side effects:	None.
  */
 
-int strneql(register char *a, register char *b, int	n)
+int strneql(register char *a, register char *b, int n)
 {
 	while (n && lower(*a) == lower(*b)) {
 		if (*a == '\0')
