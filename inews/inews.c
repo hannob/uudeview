@@ -47,14 +47,13 @@ static char *sccsid = "@(#)inews.c	1.16	(Berkeley) 8/27/89";
 int strneql(char *a, char *b, int n);
 void gen_frompath(void);
 int valid_header(register char *h);
+char lower(register char c);
 
 extern	FILE	*ser_wr_fp;
 
 char	host_name[256];
 
-int main(argc, argv)
-int	argc;
-char	*argv[];
+int main(int	argc, char	*argv[])
 {
 	char	line[NNTP_STRLEN], s[NNTP_STRLEN];
 	int	seen_fromline, in_header, seen_header;
@@ -335,12 +334,8 @@ void gen_frompath()
  *	Side effects:	None.
  */
 
-int strneql(a, b, n)
-register char *a, *b;
-int	n;
+int strneql(register char *a, register char *b, int	n)
 {
-	char	lower();
-
 	while (n && lower(*a) == lower(*b)) {
 		if (*a == '\0')
 			return (1);
@@ -368,8 +363,7 @@ int	n;
  *	Side effects:	None.
  */
 
-char lower(c)
-register char c;
+char lower(register char c)
 {
 	if (isascii(c) && isupper(c))
 		c = c - 'A' + 'a';
@@ -388,8 +382,7 @@ register char c;
  *
  */
 
-int valid_header(h)
-register char *h;
+int valid_header(register char *h)
 {
   char *colon, *space;
 
