@@ -73,7 +73,7 @@ FILE	*ser_wr_fp = NULL;
  */
 
 char *
-getserverbyfile(char	*file)
+getserverbyfile(char *file)
 {
 	register FILE	*fp;
 	register char	*cp;
@@ -134,7 +134,7 @@ getserverbyfile(char	*file)
  *			for reading and writing to server.
  */
 
-int server_init(char	*machine)
+int server_init(char *machine)
 {
 	int	sockt_rd, sockt_wr;
 	char	line[256];
@@ -342,7 +342,7 @@ int get_tcp_socket(char	*machine)
  *	Errors:		Printed via nerror.
  */
 
-int get_dnet_socket(char	*machine)
+int get_dnet_socket(char *machine)
 {
 	int	s, area, node;
 	struct	sockaddr_dn sdn;
@@ -424,7 +424,7 @@ int get_dnet_socket(char	*machine)
  *	Side effects:	None.
  */
 
-int handle_server_response(int	response, char	*server)
+int handle_server_response(int response, char *server)
 {
     switch (response) {
 	case OK_NOPOST:		/* fall through */
@@ -496,7 +496,7 @@ put_server(char *string)
  *	Side effects:	Talks to server, changes contents of "string".
  */
 
-int get_server(char	*string, int	size)
+int get_server(char *string, int size)
 {
 	register char *cp;
 
