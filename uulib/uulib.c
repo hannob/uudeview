@@ -911,9 +911,10 @@ UUDecodeFile (uulist *thefile, char *destname)
    */
 
   if ((thefile->mode & 0777) != thefile->mode) {
+    char *xdestname = destname ? destname : "(unnamed)";
     UUMessage (uulib_id, __LINE__, UUMSG_NOTE,
 	       uustring (S_STRIPPED_SETUID),
-	       destname, (int)thefile->mode);
+	       xdestname, (int)thefile->mode);
     thefile->mode &= 0777;
   }
 
