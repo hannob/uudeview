@@ -310,7 +310,7 @@ SendMkCommand (char **rcptlist, char *towhom, char *subject, int isemail)
   }
 
   if ((*rcptlist = (char *) malloc (strlen (towhom) + 16)) == NULL) {
-    fprintf (stderr, "error: Out of memory allocating %zd bytes\n",
+    fprintf (stderr, "error: Out of memory allocating %zu bytes\n",
 	     strlen (towhom)+16);
     _FP_free (command);
     return NULL;
