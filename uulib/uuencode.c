@@ -42,11 +42,11 @@
 #include <errno.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
-#include <uustring.h>
-#include <crc32.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
+#include "uustring.h"
+#include "crc32.h"
 
 /* for braindead systems */
 #ifndef SEEK_SET

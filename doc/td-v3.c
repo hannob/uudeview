@@ -2,9 +2,9 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <config.h>
-#include <uudeview.h>
-#include <fptools.h>
+#include "config.h"
+#include "uudeview.h"
+#include "fptools.h"
 
 void MsgCallBack (void *opaque, char *msg, int level)
 {

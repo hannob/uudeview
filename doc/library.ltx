@@ -1371,8 +1371,8 @@ found among the documentation files as \texttt{\mbox{td-v1.c}},
 \begin{verbatim}
 #include <stdio.h>
 #include <stdlib.h>
-#include <config.h>
-#include <uudeview.h>
+#include "config.h"
+#include "uudeview.h"
 
 int main (int argc, char *argv[])
 {
@@ -1424,8 +1424,8 @@ the file and whether this data is valid.
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <config.h>
-#include <uudeview.h>
+#include "config.h"
+#include "uudeview.h"
 
 int main (int argc, char *argv[])
 {
@@ -1497,7 +1497,7 @@ with missing parts (they're simply skipped).
 \rule{\textwidth}{1pt}
 {\small\emph{\dots{} right after the \#includes}} \\
 \begin{verbatim}
-#include <fptools.h>
+#include "fptools.h"
 
 void MsgCallBack (void *opaque, char *msg, int level)
 {

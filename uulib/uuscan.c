@@ -52,10 +52,10 @@
 #include <errno.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
-#include <uustring.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
+#include "uustring.h"
 
 char * uuscan_id = "$Id: uuscan.c,v 1.46 2004/03/01 22:52:27 fp Exp $";
 

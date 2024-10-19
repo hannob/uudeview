@@ -48,9 +48,9 @@
 #include <tcl.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
 
 /*
  * As Windows DLL, we need a DllEntryPoint

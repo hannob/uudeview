@@ -40,8 +40,8 @@
 #include <string.h>
 #endif
 
-#include <fptools.h>
-#include <uufnflt.h>
+#include "fptools.h"
+#include "uufnflt.h"
 
 
 char * uufnflt_id = "$Id: uufnflt.c,v 1.7 2003/04/13 15:41:54 fp Exp $";

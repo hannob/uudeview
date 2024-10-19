@@ -21,7 +21,7 @@
   jloup@gzip.org          madler@alumni.caltech.edu
 */
 
-#include <crc32.h>
+#include "crc32.h"
 
 /* ========================================================================
  * Table of CRC-32's of all single-byte values (made by make_crc_table)

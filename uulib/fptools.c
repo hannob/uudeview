@@ -50,7 +50,7 @@
 #include <memory.h>
 #endif
 
-#include <fptools.h>
+#include "fptools.h"
 
 #if 0
 #ifdef SYSTEM_WINDLL

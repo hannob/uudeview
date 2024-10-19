@@ -49,10 +49,10 @@
 #include <errno.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
-#include <uustring.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
+#include "uustring.h"
 
 char * uuutil_id = "$Id: uuutil.c,v 1.15 2001/06/06 18:21:47 fp Exp $";
 

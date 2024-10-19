@@ -46,9 +46,9 @@
 #include <memory.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <uustring.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "uustring.h"
 
 char * uustring_id = "$Id: uustring.c,v 1.8 2002/03/11 09:15:47 fp Exp $";
 

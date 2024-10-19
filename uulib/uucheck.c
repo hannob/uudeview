@@ -48,10 +48,10 @@
 #include <memory.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
-#include <uustring.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
+#include "uustring.h"
 
 char * uucheck_id = "$Id: uucheck.c,v 1.15 2003/04/13 15:41:55 fp Exp $";
 

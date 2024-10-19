@@ -2,8 +2,8 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <config.h>
-#include <uudeview.h>
+#include "config.h"
+#include "uudeview.h"
 
 int main (int argc, char *argv[])
 {

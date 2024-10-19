@@ -76,10 +76,10 @@
 #include <io.h>
 #endif
 
-#include <uudeview.h>
-#include <uuint.h>
-#include <fptools.h>
-#include <uustring.h>
+#include "uudeview.h"
+#include "uuint.h"
+#include "fptools.h"
+#include "uustring.h"
 
 char * uulib_id = "$Id: uulib.c,v 1.28 2003/09/29 23:27:47 fp Exp $";
 

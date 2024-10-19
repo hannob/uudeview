@@ -53,9 +53,9 @@
 #include <errno.h>
 #endif
 
-#include <uudeview.h>
-#include <fptools.h>
-#include <uufnflt.h>
+#include "uudeview.h"
+#include "fptools.h"
+#include "uufnflt.h"
 
 /* For the sake of getcwd() in DOS */
 #ifdef HAVE_DIRECT_H
