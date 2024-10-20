@@ -620,7 +620,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
 
 int UUEXPORT
 UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
-	       char *outfname, char *mimetype, int filemode)
+	       char *outfname, char *mimetype, mode_t filemode)
 {
   mimemap *miter=mimetable;
   struct stat finfo;
@@ -655,7 +655,7 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
     }
-    themode = (filemode) ? filemode : ((int) finfo.st_mode & 0777);
+    themode = (filemode) ? filemode : (finfo.st_mode & 0777);
     progress.fsize = (long) finfo.st_size;
   }
   else {
@@ -664,7 +664,7 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
       progress.fsize = -1;
     }
     else {
-      themode = (int) finfo.st_mode & 0777;
+      themode = finfo.st_mode & 0777;
       progress.fsize = (long) finfo.st_size;
     }
     theifile = infile;
@@ -788,7 +788,7 @@ int UUEXPORT
 UUEncodePartial (FILE *outfile, FILE *infile,
 		 char *infname, int encoding,
 		 char *outfname, char *mimetype,
-		 int filemode, int partno, long linperfile,
+		 mode_t filemode, int partno, long linperfile,
 		 crc32_t *crcptr)
 {
   mimemap *miter=mimetable;
@@ -836,7 +836,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
 	numparts = (int) (((long)finfo.st_size+(linperfile*bpl[encoding]-1))/
 			  (linperfile*bpl[encoding]));
 
-      themode  = (filemode) ? filemode : ((int) finfo.st_mode & 0777);
+      themode  = (filemode) ? filemode : (finfo.st_mode & 0777);
       thesize  = (long) finfo.st_size;
     }
     else {
@@ -854,7 +854,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
 	  numparts = (int) (((long)finfo.st_size+(linperfile*bpl[encoding]-1))/
 			    (linperfile*bpl[encoding]));
 
-	themode =  (int) finfo.st_mode & 0777;
+	themode = finfo.st_mode & 0777;
 	thesize = (long) finfo.st_size;
       }
       theifile = infile;
@@ -1048,7 +1048,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
 int UUEXPORT
 UUEncodeToStream (FILE *outfile, FILE *infile,
 		  char *infname, int encoding,
-		  char *outfname, int filemode)
+		  char *outfname, mode_t filemode)
 {
   struct stat finfo;
   FILE *theifile;
@@ -1082,7 +1082,7 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
     }
-    themode = (filemode) ? filemode : ((int) finfo.st_mode & 0777);
+    themode = (filemode) ? filemode : (finfo.st_mode & 0777);
     progress.fsize = (long) finfo.st_size;
   }
   else {
@@ -1092,7 +1092,7 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
       progress.fsize = -1;
     }
     else {
-      themode = (filemode) ? filemode : ((int) finfo.st_mode & 0777);
+      themode = (filemode) ? filemode : (finfo.st_mode & 0777);
       progress.fsize = (long) finfo.st_size;
     }
     theifile = infile;
@@ -1182,7 +1182,8 @@ int UUEXPORT
 UUEncodeToFile (FILE *infile, char *infname, int encoding,
 		char *outfname, char *diskname, long linperfile)
 {
-  int part, numparts, len, filemode, res;
+  int part, numparts, len, res;
+  mode_t filemode;
   char *oname=NULL, *optr, *ptr;
   FILE *theifile, *outfile;
   struct stat finfo;
@@ -1279,7 +1280,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
       numparts = (int) (((long)finfo.st_size + (linperfile*bpl[encoding]-1)) /
 			(linperfile*bpl[encoding]));
 
-    filemode = (int) finfo.st_mode & 0777;
+    filemode = finfo.st_mode & 0777;
     progress.totsize = (long) finfo.st_size;
   }
   else {
@@ -1296,7 +1297,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 	numparts = (int) (((long)finfo.st_size+(linperfile*bpl[encoding]-1))/
 			  (linperfile*bpl[encoding]));
 
-      filemode = (int) finfo.st_mode & 0777;
+      filemode = finfo.st_mode & 0777;
       progress.totsize = -1;
     }
     theifile = infile;
@@ -1489,7 +1490,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 int UUEXPORT
 UUE_PrepSingle (FILE *outfile, FILE *infile,
 		char *infname, int encoding,
-		char *outfname, int filemode,
+		char *outfname, mode_t filemode,
 		char *destination, char *from,
 		char *subject, int isemail)
 {
@@ -1504,7 +1505,7 @@ UUE_PrepSingle (FILE *outfile, FILE *infile,
 int UUEXPORT
 UUE_PrepSingleExt (FILE *outfile, FILE *infile,
 		   char *infname, int encoding,
-		   char *outfname, int filemode,
+		   char *outfname, mode_t filemode,
 		   char *destination, char *from,
 		   char *subject, char *replyto,
 		   int isemail)
@@ -1593,7 +1594,7 @@ UUE_PrepSingleExt (FILE *outfile, FILE *infile,
 int UUEXPORT
 UUE_PrepPartial (FILE *outfile, FILE *infile,
 		 char *infname, int encoding,
-		 char *outfname, int filemode,
+		 char *outfname, mode_t filemode,
 		 int partno, long linperfile, long filesize,
 		 char *destination, char *from, char *subject,
 		 int isemail)
@@ -1610,7 +1611,7 @@ UUE_PrepPartial (FILE *outfile, FILE *infile,
 int UUEXPORT
 UUE_PrepPartialExt (FILE *outfile, FILE *infile,
 		    char *infname, int encoding,
-		    char *outfname, int filemode,
+		    char *outfname, mode_t filemode,
 		    int partno, long linperfile, long filesize,
 		    char *destination,
 		    char *from, char *subject, char *replyto,
@@ -1661,7 +1662,7 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
 	numparts = (int) (((long)finfo.st_size+(linperfile*bpl[encoding]-1))/
 			  (linperfile*bpl[encoding]));
 
-      themode  = (filemode) ? filemode : ((int) finfo.st_mode & 0777);
+      themode  = (filemode) ? filemode : (finfo.st_mode & 0777);
       thesize  = (long) finfo.st_size;
     }
     else {
@@ -1691,7 +1692,7 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
 	  numparts = (int) (((long)finfo.st_size+(linperfile*bpl[encoding]-1))/
 			    (linperfile*bpl[encoding]));
 
-	filemode = (int) finfo.st_mode & 0777;
+	filemode = finfo.st_mode & 0777;
 	thesize  = (long) finfo.st_size;
       }
       theifile = infile;
