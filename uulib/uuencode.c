@@ -716,7 +716,7 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
 
   if (encoding == UU_ENCODED || encoding == XX_ENCODED) {
     fprintf (outfile, "begin %o %s%s",
-	     (themode) ? themode : 0644,
+	     (themode) ? (unsigned int)themode : 0644,
 	     UUFNameFilter ((outfname)?outfname:infname), 
 	     eolstring);
   }
@@ -1111,7 +1111,7 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
 
   if (encoding == UU_ENCODED || encoding == XX_ENCODED) {
     fprintf (outfile, "begin %o %s%s",
-	     (themode) ? themode : 0644,
+	     (themode) ? (unsigned int)themode : 0644,
 	     UUFNameFilter ((outfname)?outfname:infname), 
 	     eolstring);
   }
