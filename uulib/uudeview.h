@@ -223,37 +223,37 @@ int	UUEXPORT UUQuickDecode		_ANSI_ARGS_((FILE *, FILE *,
 
 int	UUEXPORT UUEncodeMulti		_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, char *, mode_t));
+						     char *, char *, int));
 int	UUEXPORT UUEncodePartial	_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
 						     char *, char *,
-						     mode_t, int, long,
+						     int, int, long,
 						     unsigned long*));
 int	UUEXPORT UUEncodeToStream	_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, mode_t));
+						     char *, int));
 int	UUEXPORT UUEncodeToFile		_ANSI_ARGS_((FILE *, char *, int,
 						     char *, char *, long));
 int	UUEXPORT UUE_PrepSingle		_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, mode_t,
+						     char *, int,
 						     char *, char *,
 						     char *, int));
 int	UUEXPORT UUE_PrepPartial	_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, mode_t,
+						     char *, int,
 						     int, long, long, char *,
 						     char *, char *, int));
 
 int	UUEXPORT UUE_PrepSingleExt	_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, mode_t,
+						     char *, int,
 						     char *, char *,
 						     char *, char *,
 						     int));
 int	UUEXPORT UUE_PrepPartialExt	_ANSI_ARGS_((FILE *, FILE *,
 						     char *, int,
-						     char *, mode_t,
+						     char *, int,
 						     int, long, long, char *,
 						     char *, char *, char *,
 						     int));
