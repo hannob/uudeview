@@ -47,10 +47,16 @@ Installation Instructions for the .tar.gz Version
    within it. Change to this subdirectory now, using
         cd uudeview-n
 
+   You can also receive the latest source code from the git repository:
+        git clone --depth=1 https://github.com/hannob/uudeview.git
+
 Configuration
 
-   UUDeview comes with an autoconf configuration script, which will
-   usually set all the necessary options for your system automatically.
+   To generate the configure script, run:
+        autoreconf -i
+
+   The configure script will usually set all the necessary options for
+   your system automatically.
    You can invoke this script by entering
         ./configure
 
