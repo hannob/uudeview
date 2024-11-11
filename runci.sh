@@ -1,11 +1,21 @@
 #!/bin/bash
 set -euo pipefail
 
+# Check where tcl/tk include files are.
+# Enabled on ASAN builds, disabled on others, so we spot build
+# errors for both cases.
+TCLTK=""
+if [ -f "/usr/include/tk.h" ] && [ -f "/usr/include/tcl.h" ]; then
+	TCLTK="--enable-tcl=/usr/include/ --enable-tk=/usr/include"
+elif [ -f "/usr/include/tk/tk.h" ] && [ -f "/usr/include/tcl/tcl.h" ]; then
+	TCLTK="--enable-tcl=/usr/include/tcl/ --enable-tk=/usr/include/tk/"
+fi
+
 autoreconf -i
 
 # Test with ASAN / Address Sanitizer
 export ASAN_OPTIONS="abort_on_error=1"
-./configure CFLAGS="-fsanitize=address -U_FORTIFY_SOURCE" LDFLAGS="-fsanitize=address -U_FORTIFY_SOURCE"
+./configure $TCLTK CFLAGS="-fsanitize=address -U_FORTIFY_SOURCE" LDFLAGS="-fsanitize=address -U_FORTIFY_SOURCE"
 make clean
 make
 make check
