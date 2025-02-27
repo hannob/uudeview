@@ -15,6 +15,8 @@ static char *sccsid = "@(#)inews.c	1.16	(Berkeley) 8/27/89";
  * Send bug reports to Stan Barber <sob@bcm.tmc.edu>
  */
 
+#define _XOPEN_SOURCE 500
+
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
