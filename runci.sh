@@ -33,3 +33,9 @@ export UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
 make clean
 make
 make check
+
+# Test with musl libc
+./configure CC=musl-gcc
+make clean
+make
+make check
