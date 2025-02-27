@@ -24,6 +24,8 @@
  * support for multi-files and part-ordering covered by myself.
  **/
 
+#define _XOPEN_SOURCE 500
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

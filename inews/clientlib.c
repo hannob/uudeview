@@ -10,6 +10,8 @@ static char	*sccsid = "@(#)clientlib.c	1.11	(Berkeley) 10/27/89";
  * Include configuration parameters only if we're made in the nntp tree.
  */
 
+#define _XOPEN_SOURCE 500
+
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
