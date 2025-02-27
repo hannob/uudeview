@@ -199,8 +199,8 @@ int get_tcp_socket(char	*machine)
 	int	s;
 	struct	sockaddr_in sin;
 #ifndef EXCELAN
-	struct	servent *getservbyname(), *sp;
-	struct	hostent *gethostbyname(), *hp;
+	struct	servent *sp;
+	struct	hostent *hp;
 #ifdef h_addr
 	int	x = 0;
 	register char **cp;

@@ -59,7 +59,6 @@ int main(int argc, char *argv[])
 	int	seen_fromline, in_header, seen_header;
 	int	response;
 	char	*server;
-	char	*getserverbyfile();
 	register char	*cp;
 
 	++argv;
