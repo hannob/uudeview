@@ -246,15 +246,6 @@ int get_tcp_socket(char	*machine)
 	sin.sin_port = htons(IPPORT_NNTP);
 #endif
 
-	/*
-	 * The following is kinda gross.  The name server under 4.3
-	 * returns a list of addresses, each of which should be tried
-	 * in turn if the previous one fails.  However, 4.2 hostent
-	 * structure doesn't have this list of addresses.
-	 * Under 4.3, h_addr is a #define to h_addr_list[0].
-	 * We use this to figure out whether to include the NS specific
-	 * code...
-	 */
 
 	/* get a socket and initiate connection -- use multiple addresses */
 
