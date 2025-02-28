@@ -203,10 +203,8 @@ int get_tcp_socket(char	*machine)
 #ifndef EXCELAN
 	struct	servent *sp;
 	struct	hostent *hp;
-#ifdef h_addr
 	int	x = 0;
 	register char **cp;
-#endif
 
 	if ((sp = getservbyname("nntp", "tcp")) ==  NULL) {
 		fprintf(stderr, "nntp/tcp: Unknown service.\n");
@@ -227,10 +225,7 @@ int get_tcp_socket(char	*machine)
                if( defaddr.s_addr != -1 ) {
                        strcpy( namebuf, machine );
                        def.h_name = namebuf;
-#ifdef h_addr
                        def.h_addr_list = alist;
-#endif
-                       def.h_addr = (char *)&defaddr;
                        def.h_length = sizeof( struct in_addr );
                        def.h_addrtype = AF_INET;
                        def.h_aliases = 0;
@@ -261,8 +256,6 @@ int get_tcp_socket(char	*machine)
 	 * code...
 	 */
 
-#ifdef	h_addr
-
 	/* get a socket and initiate connection -- use multiple addresses */
 
 	for (cp = hp->h_addr_list; cp && *cp; cp++) {
@@ -287,45 +280,6 @@ int get_tcp_socket(char	*machine)
 		fprintf(stderr, "giving up...\n");
 		return (-1);
 	}
-#else	/* no name server */
-#ifdef EXCELAN
-	if ((s = rresvport(SO_KEEPALIVE)) < 0)
-	{
-		/* Get the socket */
-		perror("socket");
-		return (-1);
-	}
-	/* set up addr for the connect */
-	sin.sin_addr.s_addr = rhost(machine);
-	if (sin.sin_addr.s_addr < 0){
-		fprintf(stderr, "%s: Unknown host.\n", machine);
-		return (-1);
-	}
-	/* And then connect */
-
-	if (connect(s, &sin) < 0) {
-		perror("connect");
-		(void) close(s);
-		return (-1);
-	}
-#else
-	if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket");
-		return (-1);
-	}
-
-	/* And then connect */
-
-/*	bcopy(hp->h_addr, (char *) &sin.sin_addr, hp->h_length);*/
-	memcpy ((char *)&sin.sin_addr, hp->h_addr, hp->h_length);
-	if (connect(s, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
-		perror("connect");
-		(void) close(s);
-		return (-1);
-	}
-
-#endif
-#endif
 
 	return (s);
 }
