@@ -54,8 +54,6 @@
 #include "uufnflt.h"
 
 
-char * uuenview_id = "$Id: uuenview.c,v 1.22 2002/03/06 13:52:46 fp Exp $";
-
 /*
  * mail and news software
  */

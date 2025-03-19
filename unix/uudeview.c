@@ -118,11 +118,6 @@ static int inputfiles    = 0;
 
 static char uuversion[256] = VERSION "pl" PATCH;
 
-/*
- * cvs version
- */
-char * uudeview_id = "$Id: uudeview.c,v 1.28 2003/04/12 23:33:55 fp Exp $";
-
 static int	addexts		_ANSI_ARGS_((char *));
 static int	work_file	_ANSI_ARGS_((char *));
 static int	proc_stdin	_ANSI_ARGS_((void));

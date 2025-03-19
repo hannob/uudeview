@@ -59,8 +59,6 @@
 #endif
 #endif
 
-char * uuencode_id = "$Id: uuencode.c,v 1.22 2002/04/02 10:04:52 fp Exp $";
-
 #if 0
 /*
  * the End-Of-Line string. MIME enforces CRLF, so that's what we use. Some
@@ -257,7 +255,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
   if (outfile==NULL || infile==NULL ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUEncodeStream()");
     return UURET_ILLVAL;
   }
@@ -284,7 +282,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
        */
       
       if (UUBUSYPOLL(ftell(infile)-progress.foffset,progress.fsize)) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_NOTE,
+	UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		   uustring (S_ENCODE_CANCEL));
 	return UURET_CANCEL;
       }
@@ -437,7 +435,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
        */
       
       if (UUBUSYPOLL(ftell(infile)-progress.foffset,progress.fsize)) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_NOTE,
+	UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		   uustring (S_ENCODE_CANCEL));
 	return UURET_CANCEL;
       }
@@ -511,7 +509,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
   table = etables[encoding];
 
   if (table==NULL || bpl[encoding]==0) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
                uustring (S_PARM_CHECK), "UUEncodeStream()");
     return UURET_ILLVAL;
   }
@@ -532,7 +530,7 @@ UUEncodeStream (FILE *outfile, FILE *infile, int encoding, long linperfile, crc3
      */
 
     if (UUBUSYPOLL(ftell(infile)-progress.foffset,progress.fsize)) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_ENCODE_CANCEL));
       return UURET_CANCEL;
     }
@@ -637,7 +635,7 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
       (outfname==NULL && infname==NULL) ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUEncodeMulti()");
     return UURET_ILLVAL;
   }
@@ -646,13 +644,13 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
 
   if (infile==NULL) {
     if (stat (infname, &finfo) == -1) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_STAT_FILE),
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
     }
     if ((theifile = fopen (infname, "rb")) == NULL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_FILE),
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
@@ -740,7 +738,7 @@ UUEncodeMulti (FILE *outfile, FILE *infile, char *infname, int encoding,
 
   if ((res = UUEncodeStream (outfile, theifile, encoding, 0, crcptr, NULL)) != UURET_OK) {
     if (res != UURET_CANCEL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_ERR_ENCODING),
 		 UUFNameFilter ((infname)?infname:outfname),
 		 (res==UURET_IOERR)?strerror(uu_errno):UUstrerror(res));
@@ -807,7 +805,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
       (infile == NULL&&infname==NULL) || outfile==NULL ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUEncodePartial()");
     return UURET_ILLVAL;
   }
@@ -821,13 +819,13 @@ UUEncodePartial (FILE *outfile, FILE *infile,
   if (partno == 1) {
     if (infile==NULL) {
       if (stat (infname, &finfo) == -1) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_STAT_FILE),
 		   infname, strerror (uu_errno=errno));
 	return UURET_IOERR;
       }
       if ((theifile = fopen (infname, "rb")) == NULL) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_OPEN_FILE),
 		   infname, strerror (uu_errno=errno));
 	return UURET_IOERR;
@@ -843,7 +841,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
     }
     else {
       if (fstat (fileno (infile), &finfo) != 0) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_STAT_ONE_PART));
 	numparts = 1;
 	themode  = (filemode)?filemode:0644;
@@ -977,7 +975,7 @@ UUEncodePartial (FILE *outfile, FILE *infile,
 			     crcptr, pcrcptr)) != UURET_OK) {
     if (infile==NULL) fclose (theifile);
     if (res != UURET_CANCEL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_ERR_ENCODING),
 		 UUFNameFilter ((outfname)?outfname:infname),
 		 (res==UURET_IOERR)?strerror(uu_errno):UUstrerror (res));
@@ -1064,7 +1062,7 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
       (outfname==NULL&&infname==NULL) ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUEncodeToStream()");
     return UURET_ILLVAL;
   }
@@ -1073,13 +1071,13 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
 
   if (infile==NULL) {
     if (stat (infname, &finfo) == -1) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_STAT_FILE),
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
     }
     if ((theifile = fopen (infname, "rb")) == NULL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_FILE),
 		 infname, strerror (uu_errno=errno));
       return UURET_IOERR;
@@ -1135,7 +1133,7 @@ UUEncodeToStream (FILE *outfile, FILE *infile,
 
   if ((res = UUEncodeStream (outfile, theifile, encoding, 0, crcptr, NULL)) != UURET_OK) {
     if (res != UURET_CANCEL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_ERR_ENCODING),
 		 UUFNameFilter ((infname)?infname:outfname), 
 		 (res==UURET_IOERR)?strerror(uu_errno):UUstrerror (res));
@@ -1195,7 +1193,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
       (outfname==NULL&&infname==NULL) || (infile==NULL&&infname==NULL) ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUEncodeToFile()");
     return UURET_ILLVAL;
   }
@@ -1207,7 +1205,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
       len = strlen (diskname) + ((uuencodeext)?strlen(uuencodeext):3) + 5;
 
       if ((oname = malloc (len)) == NULL) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_OUT_OF_MEMORY), len);
 	return UURET_NOMEM;
       }
@@ -1218,7 +1216,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 	+ ((uuencodeext)?strlen(uuencodeext):0) + 5;
 
       if ((oname = malloc (len)) == NULL) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_OUT_OF_MEMORY), len);
 	return UURET_NOMEM;
       }
@@ -1231,7 +1229,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 	((uuencodeext)?strlen(uuencodeext):0) + 5;
 
     if ((oname = malloc (len)) == NULL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_OUT_OF_MEMORY), len);
       return UURET_NOMEM;
     }
@@ -1262,14 +1260,14 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 
   if (infile==NULL) {
     if (stat (infname, &finfo) == -1) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_STAT_FILE),
 		 infname, strerror (uu_errno=errno));
       _FP_free (oname);
       return UURET_IOERR;
     }
     if ((theifile = fopen (infname, "rb")) == NULL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_FILE),
 		 infname, strerror (uu_errno=errno));
       _FP_free (oname);
@@ -1324,7 +1322,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
 
     if (!uu_overwrite) {
       if (stat (oname, &finfo) == 0) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_TARGET_EXISTS), oname);
 	if (infile==NULL) fclose (theifile);
 	progress.action = 0;
@@ -1354,7 +1352,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
     progress.action  = UUACT_ENCODING;
 
     if ((outfile = fopen (oname, "w")) == NULL) {
-      UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_TARGET),
 		 oname, strerror (uu_errno = errno));
       if (infile==NULL) fclose (theifile);
@@ -1431,7 +1429,7 @@ UUEncodeToFile (FILE *infile, char *infname, int encoding,
     if ((res = UUEncodeStream (outfile, theifile,
 			       encoding, linperfile, crcptr, pcrcptr)) != UURET_OK) {
       if (res != UURET_CANCEL) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_ERR_ENCODING),
 		   UUFNameFilter ((infname)?infname:outfname),	 
 		   (res==UURET_IOERR)?strerror(uu_errno):UUstrerror (res));
@@ -1519,7 +1517,7 @@ UUE_PrepSingleExt (FILE *outfile, FILE *infile,
   if ((outfname==NULL&&infname==NULL) || (infile==NULL&&infname==NULL) ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUE_PrepSingle()");
     return UURET_ILLVAL;
   }
@@ -1540,7 +1538,7 @@ UUE_PrepSingleExt (FILE *outfile, FILE *infile,
   }
 
   if ((subline = (char *) malloc (len)) == NULL) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_OUT_OF_MEMORY), len);
     return UURET_NOMEM;
   }
@@ -1631,7 +1629,7 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
   if ((outfname==NULL&&infname==NULL) || (infile==NULL&&infname==NULL) ||
       (encoding!=UU_ENCODED&&encoding!=XX_ENCODED&&encoding!=B64ENCODED&&
        encoding!=PT_ENCODED&&encoding!=QP_ENCODED&&encoding!=YENC_ENCODED)) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_PARM_CHECK), "UUE_PrepPartial()");
     return UURET_ILLVAL;
   }
@@ -1646,13 +1644,13 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
   if (partno == 1) {
     if (infile==NULL) {
       if (stat (infname, &finfo) == -1) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_STAT_FILE),
 		   infname, strerror (uu_errno=errno));
 	return UURET_IOERR;
       }
       if ((theifile = fopen (infname, "rb")) == NULL) {
-	UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_OPEN_FILE),
 		   infname, strerror (uu_errno=errno));
 	return UURET_IOERR;
@@ -1669,7 +1667,7 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
     else {
       if (fstat (fileno (infile), &finfo) != 0) {
 	if (filesize <= 0) {
-	  UUMessage (uuencode_id, __LINE__, UUMSG_WARNING,
+	  UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		     uustring (S_STAT_ONE_PART));
 	  numparts = 1;
 	  themode  = (filemode)?filemode:0644;
@@ -1720,7 +1718,7 @@ UUE_PrepPartialExt (FILE *outfile, FILE *infile,
   }
 
   if ((subline = (char *) malloc (len)) == NULL) {
-    UUMessage (uuencode_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_OUT_OF_MEMORY), len);
     if (infile==NULL) fclose (theifile);
     return UURET_NOMEM;

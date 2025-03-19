@@ -37,8 +37,6 @@
 #endif
 #endif
 
-char * uuwish_id = "$Id: uuwish.c,v 1.5 2001/06/21 14:05:47 fp Exp $";
-
 /*
  * Tcl Init function
  */

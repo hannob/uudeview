@@ -54,8 +54,6 @@
 #include "fptools.h"
 #include "uustring.h"
 
-char * uuutil_id = "$Id: uuutil.c,v 1.15 2001/06/06 18:21:47 fp Exp $";
-
 /*
  * Parts with different known extensions will not be merged by SPMS.
  * if first character is '@', it is synonymous to the previous one.
@@ -126,7 +124,7 @@ UUkilllist (uulist *data)
   while (data) {
     if (data->binfile != NULL)
       if (unlink (data->binfile))
-	UUMessage (uuutil_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_TMP_NOT_REMOVED),
 		   data->binfile, strerror (errno));
 
@@ -442,7 +440,7 @@ UUSmerge (int pass)
       continue;
     }
     if ((res = UU_smparts_r (iter, pass)) != NULL) {
-      UUMessage (uuutil_id, __LINE__, UUMSG_MESSAGE,
+      UUMessage (__FILE__, __LINE__, UUMSG_MESSAGE,
 		 uustring (S_SMERGE_MERGED),
 		 (iter->subfname) ? iter->subfname : "",
 		 (res->subfname)  ? res->subfname  : "", pass);

@@ -50,8 +50,6 @@
 #include "uuint.h"
 #include "uustring.h"
 
-char * uustring_id = "$Id: uustring.c,v 1.8 2002/03/11 09:15:47 fp Exp $";
-
 typedef struct {
   int code;
   char * msg;
@@ -162,7 +160,7 @@ uustring (int codeno)
     ptr++;
   }
 
-  UUMessage (uustring_id, __LINE__, UUMSG_ERROR,
+  UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	     "Could not retrieve string no %d",
 	     codeno);
 

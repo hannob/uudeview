@@ -57,8 +57,6 @@
 #include "fptools.h"
 #include "uustring.h"
 
-char * uunconc_id = "$Id: uunconc.c,v 1.38 2004/03/01 22:52:27 fp Exp $";
-
 /* for braindead systems */
 #ifndef SEEK_SET
 #ifdef L_BEGIN
@@ -753,7 +751,7 @@ UUDecodeQP (FILE *datain, FILE *dataout, int *state,
     if (_FP_fgets (line, 255, datain) == NULL)
       break;
     if (ferror (datain)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_SOURCE_READ_ERR),
 		 strerror (uu_errno = errno));
       return UURET_IOERR;
@@ -770,7 +768,7 @@ UUDecodeQP (FILE *datain, FILE *dataout, int *state,
     }
 
     if (UUBUSYPOLL(ftell(datain)-progress.foffset,progress.fsize)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_DECODE_CANCEL));
       return UURET_CANCEL;
     }
@@ -850,7 +848,7 @@ UUDecodePT (FILE *datain, FILE *dataout, int *state,
     if (_FP_fgets (line, 255, datain) == NULL)
       break;
     if (ferror (datain)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_SOURCE_READ_ERR),
 		 strerror (uu_errno = errno));
       return UURET_IOERR;
@@ -867,7 +865,7 @@ UUDecodePT (FILE *datain, FILE *dataout, int *state,
     }
 
     if (UUBUSYPOLL(ftell(datain)-progress.foffset,progress.fsize)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_DECODE_CANCEL));
       return UURET_CANCEL;
     }
@@ -1010,7 +1008,7 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
       break;
 
     if (ferror (datain)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_SOURCE_READ_ERR),
 		 strerror (uu_errno = errno));
       return UURET_IOERR;
@@ -1039,7 +1037,7 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
      */
 
     if (UUBUSYPOLL(ftell(datain)-progress.foffset,progress.fsize)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_DECODE_CANCEL));
       return UURET_CANCEL;
     }
@@ -1148,7 +1146,7 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
       if ((ptr = _FP_strstr (line, " pcrc32=")) != NULL) {
 	crc32_t pcrc32 = strtoul (ptr + 8, NULL, 16);
 	if (pcrc32 != yepartcrc) {
-	  UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+	  UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		     uustring (S_PCRC_MISMATCH), progress.curfile, progress.partno);
 	}
       }
@@ -1156,7 +1154,7 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
       {
 	crc32_t fcrc32 = strtoul (ptr + 7, NULL, 16);
 	if (fcrc32 != yefilecrc) {
-	  UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+	  UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		     uustring (S_CRC_MISMATCH), progress.curfile);
 	}
       }
@@ -1165,11 +1163,11 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
 	size_t size = atol(ptr + 6);
 	if (size != yepartsize && yefilesize != -1) {
 	  if (size != yefilesize)
-	    UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+	    UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		       uustring (S_PSIZE_MISMATCH), progress.curfile,
 		       progress.partno, yepartsize, size);
 	  else
-	    UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+	    UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		       uustring (S_SIZE_MISMATCH), progress.curfile,
 		       yepartsize, size);
 	}
@@ -1224,7 +1222,7 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
 	   */
 
 	  if (lc[1] > 10 && (lc[0] >= 1 && lc[0] <= 2) && !warning) {
-	    UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+	    UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		       uustring (S_DATA_SUSPICIOUS));
 	    warning=1;
 	  }
@@ -1257,14 +1255,14 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
     if (count) {
       if (method == BH_ENCODED) {
 	if (UUbhwrite (oline, 1, count, dataout) != count) {
-	  UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	  UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		     uustring (S_WR_ERR_TEMP),
 		     strerror (uu_errno = errno));
 	  return UURET_IOERR;
 	}
       }
       else if (fwrite (oline, 1, count, dataout) != count) {
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_WR_ERR_TEMP),
 		   strerror (uu_errno = errno));
 	return UURET_IOERR;
@@ -1282,14 +1280,14 @@ UUDecodePart (FILE *datain, FILE *dataout, int *state,
     if (count) {
       if (method == BH_ENCODED) {
 	if (UUbhwrite (oline, 1, count, dataout) != count) {
-	  UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	  UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		     uustring (S_WR_ERR_TEMP),
 		     strerror (uu_errno = errno));
 	  return UURET_IOERR;
 	}
       }
       else if (fwrite (oline, 1, count, dataout) != count) {
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_WR_ERR_TEMP),
 		   strerror (uu_errno = errno));
 	return UURET_IOERR;
@@ -1344,7 +1342,7 @@ UUDecode (uulist *data)
   data->binfile = malloc(strlen(tmpdir)+strlen(tmpprefix)+2);
 
   if (!data->binfile) {
-    UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_NO_TEMP_NAME));
     return UURET_NOMEM;
   }
@@ -1357,7 +1355,7 @@ UUDecode (uulist *data)
      * we couldn't create a temporary file. Usually this means that TMP
      * and TEMP aren't set
      */
-    UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_WR_ERR_TARGET),
 	       data->binfile, strerror (uu_errno = errno));
     if (tmpfd != -1) {
@@ -1443,7 +1441,7 @@ UUDecode (uulist *data)
       if ((datain = fopen (uugen_fnbuffer, "rb")) == NULL) {
 	(*uu_FileCallback) (uu_FileCBArg, iter->data->sfname,
 			    uugen_fnbuffer, 0);
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_OPEN_FILE),
 		   uugen_fnbuffer, strerror (uu_errno = errno));
 	res = UURET_IOERR;
@@ -1452,13 +1450,13 @@ UUDecode (uulist *data)
     }
     else {
       if ((datain = fopen (iter->data->sfname, "rb")) == NULL) {
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_NOT_OPEN_FILE),
 		   iter->data->sfname, strerror (uu_errno = errno));
 	res = UURET_IOERR;
 	break;
       }
-      UUMessage (uunconc_id, __LINE__, UUMSG_MESSAGE,
+      UUMessage (__FILE__, __LINE__, UUMSG_MESSAGE,
 		uustring (S_OPEN_FILE),
 		iter->data->sfname);
       _FP_strncpy (uugen_fnbuffer, iter->data->sfname, 1024);
@@ -1490,7 +1488,7 @@ UUDecode (uulist *data)
     state = DONE; /* assume we're done */
 
   if (fclose (dataout)) {
-    UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_WR_ERR_TEMP),
 	       strerror (uu_errno = errno));
     res = UURET_IOERR;
@@ -1523,13 +1521,13 @@ UUDecode (uulist *data)
     ntmp = malloc(strlen(tmpdir)+strlen(tmpprefix)+2);
 
     if (ntmp == NULL) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NO_TEMP_NAME));
       progress.action = 0;
       return UURET_NOMEM;
     }
     if ((datain = fopen (data->binfile, "rb")) == NULL) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_FILE),
 		 data->binfile, strerror (uu_errno = errno));
       progress.action = 0;
@@ -1540,7 +1538,7 @@ UUDecode (uulist *data)
     sprintf(ntmp, "%s/%s", tmpdir, tmpprefix);
     if ((tmpfd = mkstemp(ntmp)) == -1 ||
 		(dataout = fdopen(tmpfd, "wb")) == NULL) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_NOT_OPEN_TARGET),
 		 ntmp, strerror (uu_errno = errno));
       progress.action = 0;
@@ -1575,7 +1573,7 @@ UUDecode (uulist *data)
 	    (((long) 1 <<  8) * (long) r[6]) +
 	    (                   (long) r[7]);
 
-    UUMessage (uunconc_id, __LINE__, UUMSG_MESSAGE,
+    UUMessage (__FILE__, __LINE__, UUMSG_MESSAGE,
 	       uustring (S_BINHEX_SIZES),
 	       dsize, rsize);
 
@@ -1589,7 +1587,7 @@ UUDecode (uulist *data)
     }
     else {
       /* we should let the user have the choice here */
-      UUMessage (uunconc_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_BINHEX_BOTH));
       fseek  (datain, hb, SEEK_SET);
       numbytes = dsize;
@@ -1609,7 +1607,7 @@ UUDecode (uulist *data)
 
     while (!feof (datain) && numbytes) {
       if (UUBUSYPOLL(ftell(datain)-progress.foffset,progress.fsize)) {
-	UUMessage (uunconc_id, __LINE__, UUMSG_NOTE,
+	UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		   uustring (S_DECODE_CANCEL));
 	fclose (datain);
 	fclose (dataout);
@@ -1623,7 +1621,7 @@ UUDecode (uulist *data)
 
       if (ferror (datain) || (bytes == 0 && !feof (datain))) {
 	progress.action = 0;
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_SOURCE_READ_ERR),
 		   data->binfile, strerror (uu_errno = errno));
 	fclose (datain);
@@ -1634,7 +1632,7 @@ UUDecode (uulist *data)
       }
       if (fwrite (uugen_inbuffer, 1, bytes, dataout) != bytes) {
 	progress.action = 0;
-	UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_WR_ERR_TARGET),
 		   ntmp, strerror (uu_errno = errno));
 	fclose (datain);
@@ -1647,7 +1645,7 @@ UUDecode (uulist *data)
     }
 
     if (numbytes) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_SHORT_BINHEX),
 		 (data->filename)?data->filename:
 		 (data->subfname)?data->subfname:"???",
@@ -1660,7 +1658,7 @@ UUDecode (uulist *data)
 
     fclose (datain);
     if (fclose (dataout)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_WR_ERR_TARGET),
 		 ntmp, strerror (uu_errno = errno));
       unlink (ntmp);
@@ -1669,7 +1667,7 @@ UUDecode (uulist *data)
     }
 
     if (unlink (data->binfile)) {
-      UUMessage (uunconc_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_TMP_NOT_REMOVED),
 		 data->binfile, strerror (uu_errno = errno));
     }

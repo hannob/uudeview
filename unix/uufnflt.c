@@ -44,8 +44,6 @@
 #include "uufnflt.h"
 
 
-char * uufnflt_id = "$Id: uufnflt.c,v 1.7 2003/04/13 15:41:54 fp Exp $";
-
 char *
 UUFNameFilterUnix (void *opaque, char *fname)
 {

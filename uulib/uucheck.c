@@ -53,8 +53,6 @@
 #include "fptools.h"
 #include "uustring.h"
 
-char * uucheck_id = "$Id: uucheck.c,v 1.15 2003/04/13 15:41:55 fp Exp $";
-
 /*
  * Arbitrary number. This is the maximum number of part numbers we
  * store for our have-parts and missing-parts lists
@@ -349,7 +347,7 @@ UUGetFileName (char *subject, char *ptonum, char *ptonend)
   }
 
   if ((result = (char *) malloc (length + 1)) == NULL) {
-    UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_OUT_OF_MEMORY), length+1);
     return NULL;
   }
@@ -696,7 +694,7 @@ UUPreProcessPart (fileread *data, int *ret)
   uufile *result;
 
   if ((result = (uufile *) malloc (sizeof (uufile))) == NULL) {
-    UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+    UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 	       uustring (S_OUT_OF_MEMORY), sizeof (uufile));
     *ret = UURET_NOMEM;
     return NULL;
@@ -719,7 +717,7 @@ UUPreProcessPart (fileread *data, int *ret)
 
   if (data->filename != NULL) {
     if ((result->filename = _FP_strdup (data->filename)) == NULL) {
-      UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_OUT_OF_MEMORY),
 		 strlen (data->filename)+1);
       *ret = UURET_NOMEM;
@@ -755,7 +753,7 @@ UUPreProcessPart (fileread *data, int *ret)
 
     if (result->filename == NULL || 
 	result->subfname == NULL) {
-      UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_OUT_OF_MEMORY),
 		 (result->filename==NULL)?
 		 (strlen(temp)+1):(strlen(result->filename)+1));
@@ -787,7 +785,7 @@ UUPreProcessPart (fileread *data, int *ret)
      * in case the strdup failed
      */
     if (result->subfname == NULL) {
-      UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+      UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		 uustring (S_OUT_OF_MEMORY),
 		 (result->filename)?
 		 (strlen(result->filename)+1):(strlen(temp)+1));
@@ -838,7 +836,7 @@ UUPreProcessPart (fileread *data, int *ret)
         result->subfname = _FP_strdup (temp);
       }
       if (result->subfname == NULL) {
-	UUMessage (uucheck_id, __LINE__, UUMSG_ERROR,
+	UUMessage (__FILE__, __LINE__, UUMSG_ERROR,
 		   uustring (S_OUT_OF_MEMORY),
 		   (result->filename)?
 		   (strlen(result->filename)+1):(strlen(temp)+1));

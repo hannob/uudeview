@@ -80,11 +80,6 @@ DllEntryPoint (HINSTANCE hInstance, DWORD seginfo,
 #endif
 
 /*
- * cvs version
- */
-char * uutcl_id = "$Id: uutcl.c,v 1.14 2002/03/06 13:52:45 fp Exp $";
-
-/*
  * data for our Callbacks
  */
 

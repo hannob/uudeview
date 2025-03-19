@@ -57,8 +57,6 @@
 #include "fptools.h"
 #include "uustring.h"
 
-char * uuscan_id = "$Id: uuscan.c,v 1.46 2004/03/01 22:52:27 fp Exp $";
-
 /*
  * Header fields we recognize as such. See RFC822. We add "From ",
  * the usual marker for a beginning of a new message, and a couple
@@ -131,7 +129,7 @@ char *uuscan_spline;
  * Macro: print cancellation message in UUScanPart
  */
 
-#define SPCANCEL()	{UUMessage(uuscan_id,__LINE__,UUMSG_NOTE,uustring(S_SCAN_CANCEL));*errcode=UURET_CANCEL;goto ScanPartEmergency;}
+#define SPCANCEL()	{UUMessage(__FILE__,__LINE__,UUMSG_NOTE,uustring(S_SCAN_CANCEL));*errcode=UURET_CANCEL;goto ScanPartEmergency;}
 
 /*
  * Is line empty? A line is empty if it is composed of whitespace.
@@ -650,7 +648,7 @@ ScanData (FILE *datei, char *fname, int *errcode,
      */
 
     if (UUBUSYPOLL(ftell(datei),progress.fsize)) {
-      UUMessage (uuscan_id, __LINE__, UUMSG_NOTE,
+      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 		 uustring (S_SCAN_CANCEL));
       *errcode = UURET_CANCEL;
       break;
@@ -1198,7 +1196,7 @@ ScanData (FILE *datei, char *fname, int *errcode,
 	     * Make Busy Polls
 	     */
 	    if (UUBUSYPOLL(ftell(datei),progress.fsize)) {
-	      UUMessage (uuscan_id, __LINE__, UUMSG_NOTE,
+	      UUMessage (__FILE__, __LINE__, UUMSG_NOTE,
 			 uustring (S_SCAN_CANCEL));
 	      *errcode = UURET_CANCEL;
 	      break;
@@ -1700,7 +1698,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
       sstate.ismime = 1;
       if (_FP_stristr (sstate.envelope.ctype, "multipart") != NULL) {
 	if (sstate.envelope.boundary == NULL) {
-	  UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+	  UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		     uustring (S_MIME_NO_BOUNDARY));
 	  sstate.mimestate = MS_BODY;
 	  _FP_free (sstate.envelope.ctype);
@@ -1759,7 +1757,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
       prevpos = ftell (datei);
     }
     if (feof (datei) || ferror (datei)) {
-      UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_MIME_B_NOT_FOUND));
       /*
        * restart and try again; don't restart if uu_fast_scanning
@@ -1787,7 +1785,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
       }
     }
     else { /* shouldn't happen */
-      UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_MIME_B_NOT_FOUND));
       /*
        * restart and try again; don't restart if uu_fast_scanning
@@ -2006,7 +2004,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
       *errcode = UURET_CONT;
     }
     else if (mssdepth > 0) {
-      UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_MIME_B_NOT_FOUND));
       /*
        * restart and try again; don't restart if uu_fast_scanning
@@ -2174,11 +2172,11 @@ ScanPart (FILE *datei, char *fname, int *errcode)
       /* oh no, not again */
       if (mssdepth >= MSMAXDEPTH) {
 	/* Argh, what an isane message. Treat as plain text */
-	UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_MIME_MULTI_DEPTH));
       }
       else if (localenv.boundary == NULL) {
-	UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_MIME_NO_BOUNDARY));
       }
       else {
@@ -2293,7 +2291,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
 	  sstate.mimestate = MS_SUBPART;
       }
       else {
-	UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_MIME_B_NOT_FOUND));
 
 	while (mssdepth) {
@@ -2449,7 +2447,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
 	sstate.mimestate = MS_SUBPART;
     }
     else {
-      UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+      UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		 uustring (S_MIME_B_NOT_FOUND));
       
       while (mssdepth) {
@@ -2637,7 +2635,7 @@ ScanPart (FILE *datei, char *fname, int *errcode)
        * and the Content-Transfer-Encoding.
        */
       if (_FP_stristr (localenv.ctype, "multipart") != NULL) {
-	UUMessage (uuscan_id, __LINE__, UUMSG_WARNING,
+	UUMessage (__FILE__, __LINE__, UUMSG_WARNING,
 		   uustring (S_MIME_PART_MULTI));
       }
       if (localenv.subject)
