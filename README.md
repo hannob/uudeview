@@ -25,8 +25,7 @@ auto-detects all of them.
 
 The frontend programs are built around a powerful decoding library, which can be easily
 integrated into other applications as well. You can find LaTeX documentation in the doc/
-subdirectory, Postscript and HTML-formatted files can be requested from the author
-(email only).
+subdirectory.
 
 Credits
 -------
