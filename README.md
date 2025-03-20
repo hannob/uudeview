@@ -39,7 +39,8 @@ suggestions and bugreports from a number of people.
 Previous contributors include Michael Newcomb, Nico Mak, Stephane Barizien, Kris Karas,
 Joachim Meyn, Josip Rodin, Peter Muir, Chris Hanson, Andrew Shadura, Adrian Bunk,
 Andreas Metzler, Roland Rosenfeld, Martin Schulze, Nico Golde, tastytea, Pascal Jäger,
-Urs Janßen, Brady Fomegne.
+Urs Janßen, Brady Fomegne, J. Wilkinson, Kevin B. York, Steven Grady, Matthew Mueller,
+Yuri D'Elia.
 
 More Info
 ---------
