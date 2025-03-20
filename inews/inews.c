@@ -238,7 +238,7 @@ void append_signature()
 			MAX_SIGNATURE);
 			break;
 		}
-		if (cp = strchr(line, '\n'))
+		if ((cp = strchr(line, '\n')))
 			*cp = '\0';
 		fprintf(ser_wr_fp, "%s\r\n", line);
 	}

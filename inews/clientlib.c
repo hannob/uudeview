@@ -81,11 +81,11 @@ getserverbyfile(char *file)
 	register char	*cp;
 	static char	buf[256];
 
-	if (cp = getenv("NNTPSERVER")) {
+	if ((cp = getenv("NNTPSERVER"))) {
 		(void) strcpy(buf, cp);
 		return (buf);
 	}
-	if (cp = getenv("NNTP_SERVER")) {
+	if ((cp = getenv("NNTP_SERVER"))) {
 	  (void) strcpy (buf, cp);
 	  return (buf);
 	}
