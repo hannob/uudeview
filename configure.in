@@ -503,7 +503,6 @@ AC_DEFINE_UNQUOTED(DIRSEPARATOR,"$dirseparator")
 #
 
 AC_TYPE_SIZE_T
-AC_HEADER_STDC
 AC_HEADER_TIME
 AC_CHECK_HEADERS(fcntl.h unistd.h memory.h malloc.h errno.h direct.h)
 AC_CHECK_HEADERS(io.h sys/time.h)
@@ -535,15 +534,6 @@ char *blubb() { FILE *in, *out; in=stdin; out=stdout; return (char*)0; }
 ],have_stdio=yes,AC_DEFINE(HAVE_STDIO)
 have_stdio=no)
 AC_MSG_RESULT($have_stdio)
-
-if test "$ac_cv_header_stdc" = "no" ; then
-	AC_CHECK_HEADERS(stdarg.h varargs.h)
-	if test "$ac_cv_header_stdarg_h" = "no" ; then
-	if test "$ac_cv_header_varargs_h" = "no" ; then
-		AC_MSG_ERROR([neither stdarg.h nor varargs.h present])
-	fi
-	fi
-fi
 
 if test "$have_minews" = "yes" ; then
 	AC_CHECK_HEADERS(pwd.h)

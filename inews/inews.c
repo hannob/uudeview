@@ -31,10 +31,8 @@ static char *sccsid = "@(#)inews.c	1.16	(Berkeley) 8/27/89";
  * standard defines __FP__
  */
 
-#ifdef STDC_HEADERS
 #include <stdlib.h>
 #include <string.h>
-#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

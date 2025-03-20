@@ -37,10 +37,8 @@ static char	*sccsid = "@(#)clientlib.c	1.11	(Berkeley) 10/27/89";
  * __FP__ includes
  */
 
-#ifdef STDC_HEADERS
 #include <stdlib.h>
 #include <string.h>
-#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

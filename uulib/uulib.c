@@ -40,19 +40,9 @@
 #include <fcntl.h>
 #endif
 
-#ifdef STDC_HEADERS
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#else
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#else
-#ifdef HAVE_VARARGS_H
-#include <varargs.h>
-#endif
-#endif
-#endif
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -257,31 +247,13 @@ static allomap toallocate[] = {
  * Handle the printing of messages. Works like printf.
  */
 
-#if defined(STDC_HEADERS) || defined(HAVE_STDARG_H)
 int
 UUMessage (char *file, int line, int level, char *format, ...)
-#else
-int
-UUMessage (va_alist)
-  va_dcl
-#endif
 {
   char *msgptr;
-#if defined(STDC_HEADERS) || defined(HAVE_STDARG_H)
   va_list ap;
 
   va_start (ap, format);
-#else
-  char *file, *format;
-  int   line, level;
-  va_list ap;
-
-  va_start (ap);
-  file   = va_arg (ap, char *);
-  line   = va_arg (ap, int);
-  level  = va_arg (ap, int);
-  format = va_arg (ap, char *);
-#endif
 
   if (uu_debug) {
     sprintf (uulib_msgstring, "%s(%d): %s", file, line, msgnames[level]);

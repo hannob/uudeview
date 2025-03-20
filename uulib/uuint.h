@@ -272,12 +272,8 @@ extern char * (*uu_FNameFilter)  _ANSI_ARGS_((void *, char *));
  * Be careful about the definition with variable arguments.
  */
 
-#if defined(STDC_HEADERS) || defined(HAVE_STDARG_H)
 int		UUMessage		_ANSI_ARGS_((char *, int,
 						     int, char *, ...));
-#else
-int		UUMessage		();
-#endif
 int		UUBusyPoll		_ANSI_ARGS_((void));
 
 /*

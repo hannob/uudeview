@@ -35,10 +35,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#ifdef STDC_HEADERS
 #include <stdlib.h>
 #include <string.h>
-#endif
 
 #include "fptools.h"
 #include "uufnflt.h"
